@@ -1,7 +1,7 @@
 <!-- pages/index.vue -->
 <template>
   <div>
-    <h1>My MapLibre Map</h1>
+    <!-- <h1>My MapLibre Map</h1> -->
     <MapLibre />
   </div>
 </template>

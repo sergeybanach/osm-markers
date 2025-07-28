@@ -32,8 +32,8 @@ const osmStyle = {
       type: "raster",
       tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
       tileSize: 256,
-      attribution:
-        '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      // attribution:
+      //   '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
     },
   },
   layers: [
@@ -197,6 +197,7 @@ onUnmounted(() => {
 
 #map-wrapper {
   position: relative;
+  height: 100vh;
 }
 
 #map {
