@@ -270,15 +270,83 @@ export default defineNuxtConfig({
 
 ### server\api\markers.js ###
 
-import { Pool } from "pg";
+import { Pool, Client } from "pg";
 
-// Configure PostgreSQL connection
+// Configure PostgreSQL connection for initial database check
+const client = new Client({
+  user: process.env.DB_USER || "postgres",
+  host: process.env.DB_HOST || "localhost",
+  password: process.env.DB_PASSWORD || "postgres",
+  port: process.env.DB_PORT || 5432,
+  database: "postgres", // Connect to default 'postgres' database initially
+});
+
+// Configure PostgreSQL connection pool for app
 const pool = new Pool({
-  user: "postgres",
-  host: "localhost",
-  database: "map_markers",
-  password: "postgres", // Replace with your PostgreSQL password
-  port: 5432,
+  user: process.env.DB_USER || "postgres",
+  host: process.env.DB_HOST || "localhost",
+  database: process.env.DB_NAME || "map_markers",
+  password: process.env.DB_PASSWORD || "postgres",
+  port: process.env.DB_PORT || 5432,
+});
+
+// Initialize database and table
+const initializeDatabase = async () => {
+  try {
+    await client.connect();
+
+    // Check if database exists
+    const dbCheck = await client.query(
+      "SELECT 1 FROM pg_database WHERE datname = $1",
+      [process.env.DB_NAME || "map_markers"]
+    );
+
+    if (dbCheck.rowCount === 0) {
+      console.log("Creating database:", process.env.DB_NAME || "map_markers");
+      await client.query(`CREATE DATABASE ${process.env.DB_NAME || "map_markers"}`);
+      console.log("Database created successfully");
+    }
+
+    await client.end();
+  } catch (error) {
+    console.error("Error initializing database:", error.message, error.stack);
+    throw error;
+  }
+
+  // Connect to the application database and check/create table
+  try {
+    const tableCheck = await pool.query(
+      `SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name = 'markers'
+      )`
+    );
+
+    if (!tableCheck.rows[0].exists) {
+      console.log("Creating markers table");
+      await pool.query(`
+        CREATE TABLE markers (
+          id SERIAL PRIMARY KEY,
+          latitude DOUBLE PRECISION NOT NULL,
+          longitude DOUBLE PRECISION NOT NULL,
+          description TEXT,
+          picture_url TEXT,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+      console.log("Markers table created successfully");
+    }
+  } catch (error) {
+    console.error("Error initializing markers table:", error.message, error.stack);
+    throw error;
+  }
+};
+
+// Initialize database and table on startup
+initializeDatabase().catch((error) => {
+  console.error("Failed to initialize database and table:", error.message);
+  process.exit(1);
 });
 
 export default defineEventHandler(async (event) => {
@@ -290,7 +358,6 @@ export default defineEventHandler(async (event) => {
       const query =
         "SELECT id, latitude, longitude, description, picture_url, created_at FROM markers";
       const result = await pool.query(query);
-
       return {
         success: true,
         markers: result.rows,
@@ -322,7 +389,6 @@ export default defineEventHandler(async (event) => {
         picture_url || null,
       ];
       const result = await pool.query(query, values);
-
       return {
         success: true,
         marker: result.rows[0],
@@ -341,7 +407,6 @@ export default defineEventHandler(async (event) => {
     error: "Method not allowed",
   };
 });
-
 
 ### server\tsconfig.json ###
 

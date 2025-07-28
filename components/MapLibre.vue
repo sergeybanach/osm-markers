@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div id="map-wrapper">
     <button
       class="add-marker-btn"
       :class="{ active: isAddingMarker }"
@@ -7,7 +7,11 @@
     >
       {{ isAddingMarker ? "Click map to place marker" : "Add Marker" }}
     </button>
-    <div id="map" style="width: 100%; height: calc(100vh - 60px)"></div>
+    <div style="position: absolute; 
+      bottom: 10px; left: 10px; z-index: 50;">
+      isAddingMarker: {{ isAddingMarker }}
+    </div>
+    <div id="map" :class="{ 'adding-marker': isAddingMarker }" style="width: 100%; height: 100vh"></div>
   </div>
 </template>
 
@@ -18,6 +22,7 @@ import maplibregl from "maplibre-gl";
 // State for marker placement
 const isAddingMarker = ref(false);
 let map = null;
+let mapCanvas = null;
 
 // OSM style configuration
 const osmStyle = {
@@ -45,31 +50,35 @@ const osmStyle = {
 // Create popup content
 const createPopupContent = (marker) => {
   return `
-      <div style="max-width: 200px; padding: 10px;">
-        <p><strong>Description:</strong> ${
-          marker.description || "No description"
-        }</p>
-        <p><strong>Coordinates:</strong> (${marker.latitude.toFixed(
-          4
-        )}, ${marker.longitude.toFixed(4)})</p>
-        ${
-          marker.picture_url
-            ? `<img src="${marker.picture_url}" style="max-width: 100%; height: auto;" alt="Marker image">`
-            : "<p>No image available</p>"
-        }
-      </div>
-    `;
+    <div style="max-width: 200px; padding: 10px;">
+      <p><strong>Description:</strong> ${
+        marker.description || "No description"
+      }</p>
+      <p><strong>Coordinates:</strong> (${marker.latitude.toFixed(
+        4
+      )}, ${marker.longitude.toFixed(4)})</p>
+      ${
+        marker.picture_url
+          ? `<img src="${marker.picture_url}" style="max-width: 100%; height: auto;" alt="Marker image">`
+          : "<p>No image available</p>"
+      }
+    </div>
+  `;
 };
 
 // Toggle marker placement mode
 const toggleAddMarker = () => {
   isAddingMarker.value = !isAddingMarker.value;
+  changeToProperCursor();
 };
+
+const changeToProperCursor = () => {
+  mapCanvas.style.cursor = isAddingMarker.value ? 'crosshair' : '';
+}
 
 // Handle map click to add marker
 const addMarker = async (e) => {
   if (!isAddingMarker.value) return;
-
   const { lng, lat } = e.lngLat;
   const description = prompt("Enter a description for the marker (optional):");
 
@@ -97,6 +106,7 @@ const addMarker = async (e) => {
 
   // Exit marker placement mode
   isAddingMarker.value = false;
+  changeToProperCursor();
 };
 
 // Load existing markers from the database
@@ -141,6 +151,8 @@ onMounted(async () => {
   // Add click event listener for marker placement
   map.on("click", addMarker);
 
+  mapCanvas = map.getCanvas();
+
   // Load existing markers
   await loadMarkers();
 });
@@ -161,7 +173,7 @@ onUnmounted(() => {
   position: absolute;
   top: 10px;
   left: 10px;
-  z-index: 1;
+  z-index: 50;
   padding: 8px 16px;
   background-color: #007bff;
   color: white;
@@ -182,4 +194,17 @@ onUnmounted(() => {
 .add-marker-btn.active:hover {
   background-color: #218838;
 }
+
+#map-wrapper {
+  position: relative;
+}
+
+#map {
+  position: absolute;
+  top: 0px;
+  left: 0px;
+  z-index: 0;
+  cursor: default;
+}
+
 </style>
