@@ -6,7 +6,7 @@ const config = {
   // Root directory to scan
   rootDir: process.cwd(),
   // Folders to exclude
-  excludeFolders: ['node_modules', '.git', '.nuxt', 'public'],
+  excludeFolders: ['node_modules', '.git', '.nuxt', 'public', '.output'],
   // File extensions to exclude
   excludeExtensions: ['.jpg', '.png', '.gif', '.pdf', '.zip'],
   // Specific files to exclude
