@@ -1,0 +1,185 @@
+<template>
+  <div>
+    <button
+      class="add-marker-btn"
+      :class="{ active: isAddingMarker }"
+      @click="toggleAddMarker"
+    >
+      {{ isAddingMarker ? "Click map to place marker" : "Add Marker" }}
+    </button>
+    <div id="map" style="width: 100%; height: calc(100vh - 60px)"></div>
+  </div>
+</template>
+
+<script setup>
+import { ref, onMounted, onUnmounted } from "vue";
+import maplibregl from "maplibre-gl";
+
+// State for marker placement
+const isAddingMarker = ref(false);
+let map = null;
+
+// OSM style configuration
+const osmStyle = {
+  version: 8,
+  sources: {
+    osm: {
+      type: "raster",
+      tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
+      tileSize: 256,
+      attribution:
+        '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    },
+  },
+  layers: [
+    {
+      id: "osm-tiles",
+      type: "raster",
+      source: "osm",
+      minzoom: 0,
+      maxzoom: 19,
+    },
+  ],
+};
+
+// Create popup content
+const createPopupContent = (marker) => {
+  return `
+      <div style="max-width: 200px; padding: 10px;">
+        <p><strong>Description:</strong> ${
+          marker.description || "No description"
+        }</p>
+        <p><strong>Coordinates:</strong> (${marker.latitude.toFixed(
+          4
+        )}, ${marker.longitude.toFixed(4)})</p>
+        ${
+          marker.picture_url
+            ? `<img src="${marker.picture_url}" style="max-width: 100%; height: auto;" alt="Marker image">`
+            : "<p>No image available</p>"
+        }
+      </div>
+    `;
+};
+
+// Toggle marker placement mode
+const toggleAddMarker = () => {
+  isAddingMarker.value = !isAddingMarker.value;
+};
+
+// Handle map click to add marker
+const addMarker = async (e) => {
+  if (!isAddingMarker.value) return;
+
+  const { lng, lat } = e.lngLat;
+  const description = prompt("Enter a description for the marker (optional):");
+
+  // Create marker with popup
+  const markerData = { latitude: lat, longitude: lng, description };
+  const popup = new maplibregl.Popup().setHTML(createPopupContent(markerData));
+  new maplibregl.Marker().setLngLat([lng, lat]).setPopup(popup).addTo(map);
+
+  // Save marker to the database
+  try {
+    const response = await $fetch("/api/markers", {
+      method: "POST",
+      body: { latitude: lat, longitude: lng, description, picture_url: null },
+    });
+
+    if (response.success) {
+      alert("Marker saved successfully!");
+    } else {
+      alert("Failed to save marker: " + response.error);
+    }
+  } catch (error) {
+    console.error("Error saving marker:", error);
+    alert("Error saving marker: " + error.message);
+  }
+
+  // Exit marker placement mode
+  isAddingMarker.value = false;
+};
+
+// Load existing markers from the database
+const loadMarkers = async () => {
+  try {
+    const response = await $fetch("/api/markers", {
+      method: "GET",
+    });
+
+    if (response.success) {
+      response.markers.forEach((marker) => {
+        const popup = new maplibregl.Popup().setHTML(
+          createPopupContent(marker)
+        );
+        new maplibregl.Marker()
+          .setLngLat([marker.longitude, marker.latitude])
+          .setPopup(popup)
+          .addTo(map);
+      });
+    } else {
+      console.error("Failed to load markers:", response.error);
+      alert("Failed to load markers: " + response.error);
+    }
+  } catch (error) {
+    console.error("Error fetching markers:", error);
+    alert("Error fetching markers: " + error.message);
+  }
+};
+
+onMounted(async () => {
+  // Initialize the map
+  map = new maplibregl.Map({
+    container: "map",
+    style: osmStyle,
+    center: [0, 0],
+    zoom: 1,
+  });
+
+  // Add navigation controls
+  map.addControl(new maplibregl.NavigationControl());
+
+  // Add click event listener for marker placement
+  map.on("click", addMarker);
+
+  // Load existing markers
+  await loadMarkers();
+});
+
+onUnmounted(() => {
+  // Clean up
+  if (map) {
+    map.off("click", addMarker);
+    map.remove();
+  }
+});
+</script>
+
+<style>
+@import "maplibre-gl/dist/maplibre-gl.css";
+
+.add-marker-btn {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 1;
+  padding: 8px 16px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.add-marker-btn:hover {
+  background-color: #0056b3;
+}
+
+.add-marker-btn.active {
+  background-color: #28a745;
+}
+
+.add-marker-btn.active:hover {
+  background-color: #218838;
+}
+</style>
