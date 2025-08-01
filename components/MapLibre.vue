@@ -6,7 +6,13 @@
 
     <div style="position: absolute; bottom: 10px; left: 10px; z-index: 50;">
       <label for="sessionHashInput">Session Hash: </label>
-      <input id="sessionHashInput" v-model="tempSessionHash" type="text" style="margin-right: 5px;" />
+      <input 
+        id="sessionHashInput" 
+        v-model="tempSessionHash" 
+        type="text" 
+        style="margin-right: 5px;" 
+        @click="selectAndCopyHash"
+      />
       <button @click="updateSessionHash"
         style="padding: 4px 8px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">
         Update
@@ -208,6 +214,19 @@ const copySessionHash = async () => {
     alert("Session hash copied to clipboard!");
   } catch (error) {
     console.error("Error copying session hash:", error);
+    alert("Failed to copy session hash: " + error.message);
+  }
+};
+
+// Select and copy session hash on input click
+const selectAndCopyHash = async (event) => {
+  try {
+    const input = event.target;
+    input.select(); // Select all text in the input
+    await navigator.clipboard.writeText(tempSessionHash.value);
+    alert("Session hash selected and copied to clipboard!");
+  } catch (error) {
+    console.error("Error selecting and copying session hash:", error);
     alert("Failed to copy session hash: " + error.message);
   }
 };
