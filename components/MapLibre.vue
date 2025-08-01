@@ -4,7 +4,7 @@
       {{ isAddingMarker ? "Click map to place marker" : "Add Marker" }}
     </button>
 
-    <div style="position: absolute; bottom: 10px; left: 10px; z-index: 50;">
+    <div style="position: absolute; bottom: 40px; left: 10px; z-index: 50;">
       <label for="sessionHashInput">Session Hash: </label>
       <input 
         id="sessionHashInput" 
