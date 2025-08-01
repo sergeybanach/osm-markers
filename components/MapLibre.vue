@@ -27,6 +27,11 @@
       </button>
     </div>
 
+    <!-- Notification for session hash copied -->
+    <div v-if="showNotification" class="notification">
+      Session hash copied to clipboard!
+    </div>
+
     <div id="map" :class="{ 'adding-marker': isAddingMarker }" style="width: 100%; height: 100vh"></div>
   </div>
 </template>
@@ -43,6 +48,15 @@ let mapCanvas = null;
 // Session hash management
 const sessionHash = ref(localStorage.getItem("sessionHash") || "");
 const tempSessionHash = ref(sessionHash.value); // Temporary state for input field
+const showNotification = ref(false); // State for notification visibility
+
+// Function to show notification briefly
+const triggerNotification = () => {
+  showNotification.value = true;
+  setTimeout(() => {
+    showNotification.value = false;
+  }, 2000); // Hide after 2 seconds
+};
 
 // Function to generate a new session hash
 const ensureSessionHash = async () => {
@@ -211,7 +225,7 @@ const generateNewHash = async () => {
 const copySessionHash = async () => {
   try {
     await navigator.clipboard.writeText(sessionHash.value);
-    alert("Session hash copied to clipboard!");
+    triggerNotification();
   } catch (error) {
     console.error("Error copying session hash:", error);
     alert("Failed to copy session hash: " + error.message);
@@ -224,7 +238,7 @@ const selectAndCopyHash = async (event) => {
     const input = event.target;
     input.select(); // Select all text in the input
     await navigator.clipboard.writeText(tempSessionHash.value);
-    alert("Session hash selected and copied to clipboard!");
+    triggerNotification();
   } catch (error) {
     console.error("Error selecting and copying session hash:", error);
     alert("Failed to copy session hash: " + error.message);
@@ -302,5 +316,54 @@ onUnmounted(() => {
   left: 0px;
   z-index: 0;
   cursor: default;
+}
+
+/* Notification styles */
+.notification {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: #28a745;
+  color: white;
+  padding: 10px 20px;
+  border-radius: 4px;
+  z-index: 100;
+  font-size: 14px;
+  opacity: 0;
+  animation: fadeInOut 2s ease-in-out;
+}
+
+/* Animation for notification */
+@keyframes fadeInOut {
+  0% { opacity: 0; transform: translate(-50%, -10px); }
+  10% { opacity: 1; transform: translate(-50%, 0); }
+  90% { opacity: 1; transform: translate(-50%, 0); }
+  100% { opacity: 0; transform: translate(-50%, -10px); }
+}
+
+/* Mobile-friendly adjustments */
+@media (max-width: 768px) {
+  .add-marker-btn {
+    font-size: 14px;
+    padding: 6px 12px;
+  }
+
+  .notification {
+    font-size: 12px;
+    padding: 8px 16px;
+    max-width: 90%;
+    text-align: center;
+  }
+
+  input#sessionHashInput {
+    font-size: 14px;
+    padding: 4px;
+  }
+
+  button {
+    font-size: 14px;
+    padding: 4px 8px;
+  }
 }
 </style>
