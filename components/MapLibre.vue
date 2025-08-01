@@ -15,6 +15,10 @@
         style="padding: 4px 8px; background-color: #17a2b8; color: white; border: none; border-radius: 4px; cursor: pointer; margin-left: 5px;">
         Copy
       </button>
+      <button @click="generateNewHash"
+        style="padding: 4px 8px; background-color: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer; margin-left: 5px;">
+        New Hash
+      </button>
     </div>
 
     <div id="map" :class="{ 'adding-marker': isAddingMarker }" style="width: 100%; height: 100vh"></div>
@@ -165,6 +169,27 @@ const updateSessionHash = async () => {
     sessionHash.value = tempSessionHash.value;
     localStorage.setItem("sessionHash", sessionHash.value);
     await loadMarkers(); // Reload markers for the new session hash
+  }
+};
+
+// Generate new session hash
+const generateNewHash = async () => {
+  try {
+    const response = await fetch("/api/generate-session-hash");
+    const data = await response.json();
+    if (data.success) {
+      sessionHash.value = data.sessionHash;
+      tempSessionHash.value = data.sessionHash;
+      localStorage.setItem("sessionHash", sessionHash.value);
+      await loadMarkers(); // Reload markers for the new session hash
+      alert("New session hash generated successfully!");
+    } else {
+      console.error("Failed to generate session hash:", data.error);
+      alert("Failed to generate session hash: " + data.error);
+    }
+  } catch (error) {
+    console.error("Error generating session hash:", error);
+    alert("Error generating session hash: " + error.message);
   }
 };
 
