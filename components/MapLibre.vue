@@ -3,12 +3,19 @@
     <button class="add-marker-btn" :class="{ active: isAddingMarker }" @click="toggleAddMarker">
       {{ isAddingMarker ? "Click map to place marker" : "Add Marker" }}
     </button>
-    <div style="position: absolute; bottom: 30px; left: 10px; z-index: 50;">
+
+    <div style="position: absolute; bottom: 50px; left: 10px; z-index: 50;">
       isAddingMarker: {{ isAddingMarker }}
     </div>
+
     <div style="position: absolute; bottom: 10px; left: 10px; z-index: 50;">
-      Session Hash: {{ sessionHash }}
+      <label for="sessionHashInput">Session Hash: </label>
+      <input id="sessionHashInput" v-model="tempSessionHash" type="text" style="margin-right: 5px;" />
+      <button @click="updateSessionHash" style="padding: 4px 8px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">
+        Update
+      </button>
     </div>
+
     <div id="map" :class="{ 'adding-marker': isAddingMarker }" style="width: 100%; height: 100vh"></div>
   </div>
 </template>
@@ -24,14 +31,16 @@ let mapCanvas = null;
 
 // Session hash management
 const sessionHash = ref(localStorage.getItem("sessionHash") || "");
+const tempSessionHash = ref(sessionHash.value); // Temporary state for input field
+
 if (!sessionHash.value) {
   // Generate a new session hash if none exists
   fetch("/api/generate-session-hash")
     .then((response) => response.json())
     .then((data) => {
-      // console.log("data: ", data)
       if (data.success) {
         sessionHash.value = data.sessionHash;
+        tempSessionHash.value = data.sessionHash;
         localStorage.setItem("sessionHash", sessionHash.value);
       } else {
         console.error("Failed to generate session hash:", data.error);
@@ -101,6 +110,7 @@ const addMarker = async (e) => {
       method: "POST",
       body: { latitude: lat, longitude: lng, description, picture_url: null, session_hash: sessionHash.value },
     });
+
     if (response.success) {
       alert("Marker saved successfully!");
     } else {
@@ -122,7 +132,15 @@ const loadMarkers = async () => {
     const response = await $fetch(`/api/markers?session_hash=${sessionHash.value}`, {
       method: "GET",
     });
+
     if (response.success) {
+      // Clear existing markers
+      const existingMarkers = document.getElementsByClassName("maplibre-gl-marker");
+      while (existingMarkers.length > 0) {
+        existingMarkers[0].remove();
+      }
+
+      // Add new markers
       response.markers.forEach((marker) => {
         const popup = new maplibregl.Popup().setHTML(createPopupContent(marker));
         new maplibregl.Marker()
@@ -140,6 +158,15 @@ const loadMarkers = async () => {
   }
 };
 
+// Update session hash
+const updateSessionHash = async () => {
+  if (tempSessionHash.value && tempSessionHash.value !== sessionHash.value) {
+    sessionHash.value = tempSessionHash.value;
+    localStorage.setItem("sessionHash", sessionHash.value);
+    await loadMarkers(); // Reload markers for the new session hash
+  }
+};
+
 onMounted(async () => {
   // Initialize the map
   map = new maplibregl.Map({
@@ -154,6 +181,7 @@ onMounted(async () => {
 
   // Add click event listener for marker placement
   map.on("click", addMarker);
+
   mapCanvas = map.getCanvas();
 
   // Load existing markers
