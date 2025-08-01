@@ -11,6 +11,10 @@
         style="padding: 4px 8px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">
         Update
       </button>
+      <button @click="copySessionHash"
+        style="padding: 4px 8px; background-color: #17a2b8; color: white; border: none; border-radius: 4px; cursor: pointer; margin-left: 5px;">
+        Copy
+      </button>
     </div>
 
     <div id="map" :class="{ 'adding-marker': isAddingMarker }" style="width: 100%; height: 100vh"></div>
@@ -161,6 +165,17 @@ const updateSessionHash = async () => {
     sessionHash.value = tempSessionHash.value;
     localStorage.setItem("sessionHash", sessionHash.value);
     await loadMarkers(); // Reload markers for the new session hash
+  }
+};
+
+// Copy session hash to clipboard
+const copySessionHash = async () => {
+  try {
+    await navigator.clipboard.writeText(sessionHash.value);
+    alert("Session hash copied to clipboard!");
+  } catch (error) {
+    console.error("Error copying session hash:", error);
+    alert("Failed to copy session hash: " + error.message);
   }
 };
 
