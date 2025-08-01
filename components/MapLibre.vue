@@ -1,15 +1,13 @@
 <template>
   <div id="map-wrapper">
-    <button
-      class="add-marker-btn"
-      :class="{ active: isAddingMarker }"
-      @click="toggleAddMarker"
-    >
+    <button class="add-marker-btn" :class="{ active: isAddingMarker }" @click="toggleAddMarker">
       {{ isAddingMarker ? "Click map to place marker" : "Add Marker" }}
     </button>
-    <div style="position: absolute; 
-      bottom: 10px; left: 10px; z-index: 50;">
+    <div style="position: absolute; bottom: 30px; left: 10px; z-index: 50;">
       isAddingMarker: {{ isAddingMarker }}
+    </div>
+    <div style="position: absolute; bottom: 10px; left: 10px; z-index: 50;">
+      Session Hash: {{ sessionHash }}
     </div>
     <div id="map" :class="{ 'adding-marker': isAddingMarker }" style="width: 100%; height: 100vh"></div>
   </div>
@@ -24,6 +22,26 @@ const isAddingMarker = ref(false);
 let map = null;
 let mapCanvas = null;
 
+// Session hash management
+const sessionHash = ref(localStorage.getItem("sessionHash") || "");
+if (!sessionHash.value) {
+  // Generate a new session hash if none exists
+  fetch("/api/generate-session-hash")
+    .then((response) => response.json())
+    .then((data) => {
+      // console.log("data: ", data)
+      if (data.success) {
+        sessionHash.value = data.sessionHash;
+        localStorage.setItem("sessionHash", sessionHash.value);
+      } else {
+        console.error("Failed to generate session hash:", data.error);
+      }
+    })
+    .catch((error) => {
+      console.error("Error generating session hash:", error);
+    });
+}
+
 // OSM style configuration
 const osmStyle = {
   version: 8,
@@ -32,8 +50,6 @@ const osmStyle = {
       type: "raster",
       tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
       tileSize: 256,
-      // attribution:
-      //   '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
     },
   },
   layers: [
@@ -51,17 +67,9 @@ const osmStyle = {
 const createPopupContent = (marker) => {
   return `
     <div style="max-width: 200px; padding: 10px;">
-      <p><strong>Description:</strong> ${
-        marker.description || "No description"
-      }</p>
-      <p><strong>Coordinates:</strong> (${marker.latitude.toFixed(
-        4
-      )}, ${marker.longitude.toFixed(4)})</p>
-      ${
-        marker.picture_url
-          ? `<img src="${marker.picture_url}" style="max-width: 100%; height: auto;" alt="Marker image">`
-          : "<p>No image available</p>"
-      }
+      <p><strong>Description:</strong> ${marker.description || "No description"}</p>
+      <p><strong>Coordinates:</strong> (${marker.latitude.toFixed(4)}, ${marker.longitude.toFixed(4)})</p>
+      ${marker.picture_url ? `<img src="${marker.picture_url}" style="max-width: 100%; height: auto;" alt="Marker image">` : "<p>No image available</p>"}
     </div>
   `;
 };
@@ -73,8 +81,8 @@ const toggleAddMarker = () => {
 };
 
 const changeToProperCursor = () => {
-  mapCanvas.style.cursor = isAddingMarker.value ? 'crosshair' : '';
-}
+  mapCanvas.style.cursor = isAddingMarker.value ? "crosshair" : "";
+};
 
 // Handle map click to add marker
 const addMarker = async (e) => {
@@ -83,7 +91,7 @@ const addMarker = async (e) => {
   const description = prompt("Enter a description for the marker (optional):");
 
   // Create marker with popup
-  const markerData = { latitude: lat, longitude: lng, description };
+  const markerData = { latitude: lat, longitude: lng, description, session_hash: sessionHash.value };
   const popup = new maplibregl.Popup().setHTML(createPopupContent(markerData));
   new maplibregl.Marker().setLngLat([lng, lat]).setPopup(popup).addTo(map);
 
@@ -91,9 +99,8 @@ const addMarker = async (e) => {
   try {
     const response = await $fetch("/api/markers", {
       method: "POST",
-      body: { latitude: lat, longitude: lng, description, picture_url: null },
+      body: { latitude: lat, longitude: lng, description, picture_url: null, session_hash: sessionHash.value },
     });
-
     if (response.success) {
       alert("Marker saved successfully!");
     } else {
@@ -112,15 +119,12 @@ const addMarker = async (e) => {
 // Load existing markers from the database
 const loadMarkers = async () => {
   try {
-    const response = await $fetch("/api/markers", {
+    const response = await $fetch(`/api/markers?session_hash=${sessionHash.value}`, {
       method: "GET",
     });
-
     if (response.success) {
       response.markers.forEach((marker) => {
-        const popup = new maplibregl.Popup().setHTML(
-          createPopupContent(marker)
-        );
+        const popup = new maplibregl.Popup().setHTML(createPopupContent(marker));
         new maplibregl.Marker()
           .setLngLat([marker.longitude, marker.latitude])
           .setPopup(popup)
@@ -150,7 +154,6 @@ onMounted(async () => {
 
   // Add click event listener for marker placement
   map.on("click", addMarker);
-
   mapCanvas = map.getCanvas();
 
   // Load existing markers
@@ -207,5 +210,4 @@ onUnmounted(() => {
   z-index: 0;
   cursor: default;
 }
-
 </style>
