@@ -1,3 +1,4 @@
+<!-- components/MapLibre.vue -->
 <template>
   <div id="map-wrapper">
     <button class="add-marker-btn" :class="{ active: isAddingMarker }" @click="toggleAddMarker">
@@ -46,6 +47,10 @@ const sessionHash = ref(localStorage.getItem("sessionHash") || "");
 const tempSessionHash = ref(sessionHash.value); // Temporary state for input field
 const showNotification = ref(false); // State for notification visibility
 
+// Default map position (fallback if no saved position)
+const defaultCenter = [0, 0];
+const defaultZoom = 1;
+
 // Function to show notification briefly
 const triggerNotification = () => {
   showNotification.value = true;
@@ -54,8 +59,9 @@ const triggerNotification = () => {
   }, 2000); // Hide after 2 seconds
 };
 
-// Function to generate a new session hash
-const ensureSessionHash = async () => {
+// Function to ensure session hash exists and load map position
+const ensureSessionHashAndMapPosition = async () => {
+  // Ensure session hash
   if (!sessionHash.value) {
     try {
       const response = await fetch("/api/generate-session-hash");
@@ -67,11 +73,30 @@ const ensureSessionHash = async () => {
       } else {
         console.error("Failed to generate session hash:", data.error);
         alert("Failed to generate session hash: " + data.error);
+        return null;
       }
     } catch (error) {
       console.error("Error generating session hash:", error);
       alert("Error generating session hash: " + error.message);
+      return null;
     }
+  }
+
+  // Load map position
+  try {
+    const response = await $fetch(`/api/markers?session_hash=${encodeURIComponent(sessionHash.value)}`, {
+      method: "GET",
+    });
+
+    if (response.success) {
+      return response.mapPosition || null;
+    } else {
+      console.error("Failed to load map position:", response.error);
+      return null;
+    }
+  } catch (error) {
+    console.error("Error fetching map position:", error);
+    return null;
   }
 };
 
@@ -187,15 +212,38 @@ const addMarker = async (e) => {
   changeToProperCursor();
 };
 
+// Save map position to the database
+const saveMapPosition = async () => {
+  try {
+    const center = map.getCenter();
+    const zoom = map.getZoom();
+    const response = await $fetch("/api/markers", {
+      method: "POST",
+      body: {
+        center_longitude: center.lng,
+        center_latitude: center.lat,
+        zoom_level: zoom,
+        session_hash: sessionHash.value,
+      },
+    });
+
+    if (!response.success) {
+      console.error("Failed to save map position:", response.error);
+    }
+  } catch (error) {
+    console.error("Error saving map position:", error);
+  }
+};
+
 // Load existing markers from the database
 const loadMarkers = async () => {
   if (!sessionHash.value) {
     console.error("No session hash available for loading markers");
-    return;
+    return [];
   }
 
   try {
-    const response = await $fetch(`/api/markers?session_hash=${sessionHash.value}`, {
+    const response = await $fetch(`/api/markers?session_hash=${encodeURIComponent(sessionHash.value)}`, {
       method: "GET",
     });
 
@@ -214,13 +262,17 @@ const loadMarkers = async () => {
         popup.setHTML(createPopupContent(marker, markerInstance));
         markers.value.push({ id: marker.id, marker: markerInstance });
       });
+
+      return response.markers;
     } else {
       console.error("Failed to load markers:", response.error);
       alert("Failed to load markers: " + response.error);
+      return [];
     }
   } catch (error) {
-    console.error("Error fetching markers:", error);
-    alert("Error fetching markers: " + error.message);
+    console.error("Error fetching markers:", error, error.stack);
+    alert(`Error fetching markers: ${error.message || "An unexpected error occurred"}`);
+    return [];
   }
 };
 
@@ -229,7 +281,12 @@ const updateSessionHash = async () => {
   if (tempSessionHash.value && tempSessionHash.value !== sessionHash.value) {
     sessionHash.value = tempSessionHash.value;
     localStorage.setItem("sessionHash", sessionHash.value);
-    await loadMarkers(); // Reload markers for the new session hash
+    const mapPosition = await ensureSessionHashAndMapPosition();
+    if (map && mapPosition) {
+      map.setCenter([mapPosition.center_longitude, mapPosition.center_latitude]);
+      map.setZoom(mapPosition.zoom_level);
+    }
+    await loadMarkers();
   }
 };
 
@@ -242,7 +299,12 @@ const generateNewHash = async () => {
       sessionHash.value = data.sessionHash;
       tempSessionHash.value = data.sessionHash;
       localStorage.setItem("sessionHash", sessionHash.value);
-      await loadMarkers(); // Reload markers for the new session hash
+      const mapPosition = await ensureSessionHashAndMapPosition();
+      if (map && mapPosition) {
+        map.setCenter([mapPosition.center_longitude, mapPosition.center_latitude]);
+        map.setZoom(mapPosition.zoom_level);
+      }
+      await loadMarkers();
       alert("New session hash generated successfully!");
     } else {
       console.error("Failed to generate session hash:", data.error);
@@ -279,12 +341,15 @@ const selectAndCopyHash = async (event) => {
 };
 
 onMounted(async () => {
-  // Initialize the map
+  // Get session hash and map position
+  const mapPosition = await ensureSessionHashAndMapPosition();
+
+  // Initialize the map with loaded or default position
   map = new maplibregl.Map({
     container: "map",
     style: osmStyle,
-    center: [0, 0],
-    zoom: 1,
+    center: mapPosition ? [mapPosition.center_longitude, mapPosition.center_latitude] : defaultCenter,
+    zoom: mapPosition ? mapPosition.zoom_level : defaultZoom,
   });
 
   // Add navigation controls
@@ -295,15 +360,21 @@ onMounted(async () => {
 
   mapCanvas = map.getCanvas();
 
-  // Ensure session hash exists before loading markers
-  await ensureSessionHash();
-  await loadMarkers();
+  // Wait for the map to fully load before loading markers
+  map.on("load", async () => {
+    // Load markers
+    await loadMarkers();
+  });
+
+  // Add moveend event listener to save map position
+  map.on("moveend", saveMapPosition);
 });
 
 onUnmounted(() => {
   // Clean up
   if (map) {
     map.off("click", addMarker);
+    map.off("moveend", saveMapPosition);
     map.remove();
   }
   // Remove global function

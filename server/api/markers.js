@@ -6,7 +6,7 @@ const client = new Client({
   host: process.env.DB_HOST || "localhost",
   password: process.env.DB_PASSWORD || "postgres",
   port: process.env.DB_PORT || 5432,
-  database: "postgres", // Connect to default 'postgres' database initially
+  database: "postgres",
 });
 
 // Configure PostgreSQL connection pool for app
@@ -18,7 +18,7 @@ const pool = new Pool({
   port: process.env.DB_PORT || 5432,
 });
 
-// Initialize database and table
+// Initialize database and tables
 const initializeDatabase = async () => {
   try {
     await client.connect();
@@ -38,8 +38,9 @@ const initializeDatabase = async () => {
     throw error;
   }
 
-  // Connect to the application database and check/create table
+  // Connect to the application database and check/create tables
   try {
+    // Check and create markers table
     const tableCheck = await pool.query(
       `SELECT EXISTS (
         SELECT FROM information_schema.tables
@@ -62,7 +63,7 @@ const initializeDatabase = async () => {
       `);
       console.log("Markers table created successfully");
     } else {
-      // Check if session_hash column exists, add it if not
+      // Check if session_hash column exists
       const columnCheck = await pool.query(`
         SELECT EXISTS (
           SELECT FROM information_schema.columns
@@ -77,15 +78,38 @@ const initializeDatabase = async () => {
         console.log("session_hash column added successfully");
       }
     }
+
+    // Check and create map_positions table
+    const mapPositionsTableCheck = await pool.query(
+      `SELECT EXISTS (
+        SELECT FROM information_schema.tables
+        WHERE table_schema = 'public'
+        AND table_name = 'map_positions'
+      )`
+    );
+    if (!mapPositionsTableCheck.rows[0].exists) {
+      console.log("Creating map_positions table");
+      await pool.query(`
+        CREATE TABLE map_positions (
+          id SERIAL PRIMARY KEY,
+          session_hash TEXT NOT NULL UNIQUE,
+          center_longitude DOUBLE PRECISION NOT NULL,
+          center_latitude DOUBLE PRECISION NOT NULL,
+          zoom_level DOUBLE PRECISION NOT NULL,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+      console.log("Map_positions table created successfully");
+    }
   } catch (error) {
-    console.error("Error initializing markers table:", error.message, error.stack);
+    console.error("Error initializing tables:", error.message, error.stack);
     throw error;
   }
 };
 
-// Initialize database and table on startup
+// Initialize database and tables on startup
 initializeDatabase().catch((error) => {
-  console.error("Failed to initialize database and table:", error.message);
+  console.error("Failed to initialize database and tables:", error.message);
   process.exit(1);
 });
 
@@ -93,7 +117,7 @@ export default defineEventHandler(async (event) => {
   const method = event.node.req.method;
 
   if (method === "GET") {
-    // Fetch markers for a specific session hash
+    // Fetch markers and map position for a specific session hash
     const queryParams = new URLSearchParams(event.node.req.url.split("?")[1] || "");
     const sessionHash = queryParams.get("session_hash");
 
@@ -105,29 +129,40 @@ export default defineEventHandler(async (event) => {
     }
 
     try {
-      const query = `
+      // Fetch markers
+      const markersQuery = `
         SELECT id, latitude, longitude, description, picture_url, session_hash, created_at
         FROM markers
         WHERE session_hash = $1
       `;
-      const result = await pool.query(query, [sessionHash]);
+      const markersResult = await pool.query(markersQuery, [sessionHash]);
+
+      // Fetch map position
+      const positionQuery = `
+        SELECT center_longitude, center_latitude, zoom_level
+        FROM map_positions
+        WHERE session_hash = $1
+      `;
+      const positionResult = await pool.query(positionQuery, [sessionHash]);
+
       return {
         success: true,
-        markers: result.rows,
+        markers: markersResult.rows,
+        mapPosition: positionResult.rows[0] || null,
       };
     } catch (error) {
-      console.error("Error fetching markers:", error.message, error.stack);
+      console.error("Error fetching data:", error.message, error.stack);
       return {
         success: false,
-        error: `Failed to fetch markers: ${error.message}`,
+        error: `Failed to fetch data: ${error.message}`,
       };
     }
   }
 
   if (method === "POST") {
-    // Save a new marker
+    // Save a new marker or map position
     const body = await readBody(event);
-    const { latitude, longitude, description, picture_url, session_hash } = body;
+    const { latitude, longitude, description, picture_url, session_hash, center_longitude, center_latitude, zoom_level } = body;
 
     if (!session_hash) {
       return {
@@ -137,28 +172,55 @@ export default defineEventHandler(async (event) => {
     }
 
     try {
-      const query = `
-        INSERT INTO markers (latitude, longitude, description, picture_url, session_hash)
-        VALUES ($1, $2, $3, $4, $5)
-        RETURNING id, latitude, longitude, description, picture_url, session_hash, created_at
-      `;
-      const values = [
-        latitude,
-        longitude,
-        description || "",
-        picture_url || null,
-        session_hash,
-      ];
-      const result = await pool.query(query, values);
-      return {
-        success: true,
-        marker: result.rows[0],
-      };
+      if (latitude !== undefined && longitude !== undefined) {
+        // Save marker
+        const query = `
+          INSERT INTO markers (latitude, longitude, description, picture_url, session_hash)
+          VALUES ($1, $2, $3, $4, $5)
+          RETURNING id, latitude, longitude, description, picture_url, session_hash, created_at
+        `;
+        const values = [
+          latitude,
+          longitude,
+          description || "",
+          picture_url || null,
+          session_hash,
+        ];
+        const result = await pool.query(query, values);
+        return {
+          success: true,
+          marker: result.rows[0],
+        };
+      } else if (center_longitude !== undefined && center_latitude !== undefined && zoom_level !== undefined) {
+        // Save or update map position
+        const query = `
+          INSERT INTO map_positions (session_hash, center_longitude, center_latitude, zoom_level)
+          VALUES ($1, $2, $3, $4)
+          ON CONFLICT (session_hash)
+          DO UPDATE SET
+            center_longitude = $2,
+            center_latitude = $3,
+            zoom_level = $4,
+            updated_at = CURRENT_TIMESTAMP
+          RETURNING center_longitude, center_latitude, zoom_level, updated_at
+        `;
+        const values = [session_hash, center_longitude, center_latitude, zoom_level];
+        const result = await pool.query(query, values);
+        return {
+          success: true,
+          mapPosition: result.rows[0],
+        };
+      } else {
+        return {
+          success: false,
+          error: "Invalid request body",
+        };
+      }
     } catch (error) {
-      console.error("Error saving marker:", error.message, error.stack);
+      console.error("Error saving data:", error.message, error.stack);
       return {
         success: false,
-        error: `Failed to save marker: ${error.message}`,
+        error: `Failed to save data: ${error.message}`,
       };
     }
   }
