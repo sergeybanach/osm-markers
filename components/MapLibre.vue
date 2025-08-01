@@ -38,23 +38,26 @@ let mapCanvas = null;
 const sessionHash = ref(localStorage.getItem("sessionHash") || "");
 const tempSessionHash = ref(sessionHash.value); // Temporary state for input field
 
-if (!sessionHash.value) {
-  // Generate a new session hash if none exists
-  fetch("/api/generate-session-hash")
-    .then((response) => response.json())
-    .then((data) => {
+// Function to generate a new session hash
+const ensureSessionHash = async () => {
+  if (!sessionHash.value) {
+    try {
+      const response = await fetch("/api/generate-session-hash");
+      const data = await response.json();
       if (data.success) {
         sessionHash.value = data.sessionHash;
         tempSessionHash.value = data.sessionHash;
         localStorage.setItem("sessionHash", sessionHash.value);
       } else {
         console.error("Failed to generate session hash:", data.error);
+        alert("Failed to generate session hash: " + data.error);
       }
-    })
-    .catch((error) => {
+    } catch (error) {
       console.error("Error generating session hash:", error);
-    });
-}
+      alert("Error generating session hash: " + error.message);
+    }
+  }
+};
 
 // OSM style configuration
 const osmStyle = {
@@ -133,6 +136,11 @@ const addMarker = async (e) => {
 
 // Load existing markers from the database
 const loadMarkers = async () => {
+  if (!sessionHash.value) {
+    console.error("No session hash available for loading markers");
+    return;
+  }
+
   try {
     const response = await $fetch(`/api/markers?session_hash=${sessionHash.value}`, {
       method: "GET",
@@ -221,7 +229,8 @@ onMounted(async () => {
 
   mapCanvas = map.getCanvas();
 
-  // Load existing markers
+  // Ensure session hash exists before loading markers
+  await ensureSessionHash();
   await loadMarkers();
 });
 
