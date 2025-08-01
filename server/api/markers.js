@@ -163,6 +163,44 @@ export default defineEventHandler(async (event) => {
     }
   }
 
+  if (method === "DELETE") {
+    // Remove a marker
+    const body = await readBody(event);
+    const { id, session_hash } = body;
+
+    if (!id || !session_hash) {
+      return {
+        success: false,
+        error: "Marker ID and session hash are required",
+      };
+    }
+
+    try {
+      const query = `
+        DELETE FROM markers
+        WHERE id = $1 AND session_hash = $2
+        RETURNING id
+      `;
+      const result = await pool.query(query, [id, session_hash]);
+      if (result.rowCount === 0) {
+        return {
+          success: false,
+          error: "Marker not found or session hash mismatch",
+        };
+      }
+      return {
+        success: true,
+        message: "Marker removed successfully",
+      };
+    } catch (error) {
+      console.error("Error removing marker:", error.message, error.stack);
+      return {
+        success: false,
+        error: `Failed to remove marker: ${error.message}`,
+      };
+    }
+  }
+
   return {
     success: false,
     error: "Method not allowed",

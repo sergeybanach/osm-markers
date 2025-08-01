@@ -39,6 +39,7 @@ import maplibregl from "maplibre-gl";
 const isAddingMarker = ref(false);
 let map = null;
 let mapCanvas = null;
+const markers = ref([]); // Store marker instances with their IDs
 
 // Session hash management
 const sessionHash = ref(localStorage.getItem("sessionHash") || "");
@@ -95,16 +96,47 @@ const osmStyle = {
   ],
 };
 
-// Create popup content
-const createPopupContent = (marker) => {
+// Create popup content with remove button
+const createPopupContent = (marker, markerInstance) => {
   return `
     <div style="max-width: 200px; padding: 10px;">
       <p><strong>Description:</strong> ${marker.description || "No description"}</p>
       <p><strong>Coordinates:</strong> (${marker.latitude.toFixed(4)}, ${marker.longitude.toFixed(4)})</p>
       ${marker.picture_url ? `<img src="${marker.picture_url}" style="max-width: 100%; height: auto;" alt="Marker image">` : "<p>No image available</p>"}
+      <button onclick="window.removeMarker(${marker.id})" style="margin-top: 10px; padding: 5px 10px; background-color: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer;">
+        Remove Marker
+      </button>
     </div>
   `;
 };
+
+// Function to remove marker
+const removeMarker = async (markerId) => {
+  const markerInstance = markers.value.find(m => m.id === markerId);
+  if (!markerInstance) return;
+
+  try {
+    const response = await $fetch(`/api/markers`, {
+      method: "DELETE",
+      body: { id: markerId, session_hash: sessionHash.value },
+    });
+
+    if (response.success) {
+      // Remove marker from map
+      markerInstance.marker.remove();
+      // Remove marker from local state
+      markers.value = markers.value.filter(m => m.id !== markerId);
+    } else {
+      alert("Failed to remove marker: " + response.error);
+    }
+  } catch (error) {
+    console.error("Error removing marker:", error);
+    alert("Error removing marker: " + error.message);
+  }
+};
+
+// Expose removeMarker to global scope for popup button
+window.removeMarker = removeMarker;
 
 // Toggle marker placement mode
 const toggleAddMarker = () => {
@@ -124,8 +156,8 @@ const addMarker = async (e) => {
 
   // Create marker with popup
   const markerData = { latitude: lat, longitude: lng, description, session_hash: sessionHash.value };
-  const popup = new maplibregl.Popup().setHTML(createPopupContent(markerData));
-  new maplibregl.Marker().setLngLat([lng, lat]).setPopup(popup).addTo(map);
+  const popup = new maplibregl.Popup();
+  const markerInstance = new maplibregl.Marker().setLngLat([lng, lat]).setPopup(popup).addTo(map);
 
   // Save marker to the database
   try {
@@ -135,12 +167,19 @@ const addMarker = async (e) => {
     });
 
     if (response.success) {
+      // Update popup content with the new marker ID
+      markerData.id = response.marker.id;
+      popup.setHTML(createPopupContent(markerData, markerInstance));
+      // Store marker instance with ID
+      markers.value.push({ id: markerData.id, marker: markerInstance });
     } else {
       alert("Failed to save marker: " + response.error);
+      markerInstance.remove(); // Remove marker if save fails
     }
   } catch (error) {
     console.error("Error saving marker:", error);
     alert("Error saving marker: " + error.message);
+    markerInstance.remove(); // Remove marker if save fails
   }
 
   // Exit marker placement mode
@@ -162,18 +201,18 @@ const loadMarkers = async () => {
 
     if (response.success) {
       // Clear existing markers
-      const existingMarkers = document.getElementsByClassName("maplibre-gl-marker");
-      while (existingMarkers.length > 0) {
-        existingMarkers[0].remove();
-      }
+      markers.value.forEach(m => m.marker.remove());
+      markers.value = [];
 
       // Add new markers
       response.markers.forEach((marker) => {
-        const popup = new maplibregl.Popup().setHTML(createPopupContent(marker));
-        new maplibregl.Marker()
+        const popup = new maplibregl.Popup();
+        const markerInstance = new maplibregl.Marker()
           .setLngLat([marker.longitude, marker.latitude])
           .setPopup(popup)
           .addTo(map);
+        popup.setHTML(createPopupContent(marker, markerInstance));
+        markers.value.push({ id: marker.id, marker: markerInstance });
       });
     } else {
       console.error("Failed to load markers:", response.error);
@@ -267,6 +306,8 @@ onUnmounted(() => {
     map.off("click", addMarker);
     map.remove();
   }
+  // Remove global function
+  delete window.removeMarker;
 });
 </script>
 
