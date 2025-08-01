@@ -6,13 +6,8 @@
 
     <div style="position: absolute; bottom: 40px; left: 10px; z-index: 50;">
       <label for="sessionHashInput">Session Hash: </label>
-      <input 
-        id="sessionHashInput" 
-        v-model="tempSessionHash" 
-        type="text" 
-        style="margin-right: 5px;" 
-        @click="selectAndCopyHash"
-      />
+      <input id="sessionHashInput" v-model="tempSessionHash" type="text" style="margin-right: 5px;"
+        @click="selectAndCopyHash" />
       <button @click="updateSessionHash"
         style="padding: 4px 8px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">
         Update
@@ -140,7 +135,6 @@ const addMarker = async (e) => {
     });
 
     if (response.success) {
-      alert("Marker saved successfully!");
     } else {
       alert("Failed to save marker: " + response.error);
     }
@@ -336,10 +330,25 @@ onUnmounted(() => {
 
 /* Animation for notification */
 @keyframes fadeInOut {
-  0% { opacity: 0; transform: translate(-50%, -10px); }
-  10% { opacity: 1; transform: translate(-50%, 0); }
-  90% { opacity: 1; transform: translate(-50%, 0); }
-  100% { opacity: 0; transform: translate(-50%, -10px); }
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -10px);
+  }
+
+  10% {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+
+  90% {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -10px);
+  }
 }
 
 /* Mobile-friendly adjustments */
