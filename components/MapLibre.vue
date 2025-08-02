@@ -417,6 +417,22 @@ const addMarker = async (e) => {
       popup.setHTML(createPopupContent(markerData, markerInstance));
       // Store marker instance with ID
       markers.value.push({ id: markerData.id, marker: markerInstance });
+
+      // Add hover cursor event listeners
+      const markerElement = markerInstance.getElement();
+      markerElement.style.cursor = "pointer";
+      markerElement.addEventListener("mouseover", () => {
+        if (!isAddingMarker.value && !isMovingMarker.value) {
+          mapCanvas.style.cursor = "pointer";
+        }
+      });
+      markerElement.addEventListener("mouseleave", () => {
+        if (!isAddingMarker.value && !isMovingMarker.value) {
+          mapCanvas.style.cursor = "";
+        } else {
+          changeToProperCursor();
+        }
+      });
     } else {
       alert("Failed to save marker: " + response.error);
       markerInstance.remove(); // Remove marker if save fails
@@ -469,7 +485,12 @@ const loadMarkers = async () => {
 
     if (response.success) {
       // Clear existing markers
-      markers.value.forEach(m => m.marker.remove());
+      markers.value.forEach(m => {
+        const markerElement = m.marker.getElement();
+        markerElement.removeEventListener("mouseover", () => {});
+        markerElement.removeEventListener("mouseleave", () => {});
+        m.marker.remove();
+      });
       markers.value = [];
 
       // Add new markers
@@ -481,6 +502,22 @@ const loadMarkers = async () => {
           .addTo(map);
         popup.setHTML(createPopupContent(marker, markerInstance));
         markers.value.push({ id: marker.id, marker: markerInstance });
+
+        // Add hover cursor event listeners
+        const markerElement = markerInstance.getElement();
+        markerElement.style.cursor = "pointer";
+        markerElement.addEventListener("mouseover", () => {
+          if (!isAddingMarker.value && !isMovingMarker.value) {
+            mapCanvas.style.cursor = "pointer";
+          }
+        });
+        markerElement.addEventListener("mouseleave", () => {
+          if (!isAddingMarker.value && !isMovingMarker.value) {
+            mapCanvas.style.cursor = "";
+          } else {
+            changeToProperCursor();
+          }
+        });
       });
 
       return response.markers;
