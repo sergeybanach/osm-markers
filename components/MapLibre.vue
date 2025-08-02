@@ -123,13 +123,24 @@ const osmStyle = {
   ],
 };
 
-// Create popup content with edit, move, and remove buttons
+// Create popup content with editable coordinates, edit, move, and remove buttons
 const createPopupContent = (marker, markerInstance) => {
   return `
     <div style="max-width: 200px; padding: 10px;">
       <p><strong>Description:</strong> ${marker.description || "No description"}</p>
-      <p><strong>Coordinates:</strong> (${marker.latitude.toFixed(4)}, ${marker.longitude.toFixed(4)})</p>
+      <p><strong>Coordinates:</strong></p>
+      <div>
+        <label>Latitude: </label>
+        <input type="number" id="lat-${marker.id}" value="${marker.latitude.toFixed(4)}" step="any" style="width: 100px; margin-bottom: 5px;" />
+      </div>
+      <div>
+        <label>Longitude: </label>
+        <input type="number" id="lng-${marker.id}" value="${marker.longitude.toFixed(4)}" step="any" style="width: 100px; margin-bottom: 10px;" />
+      </div>
       ${marker.picture_url ? `<img src="${marker.picture_url}" style="max-width: 100%; height: auto;" alt="Marker image">` : "<p>No image available</p>"}
+      <button onclick="window.updateMarkerCoordinates(${marker.id})" style="margin-top: 10px; margin-right: 5px; padding: 5px 10px; background-color: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer;">
+        Update Coordinates
+      </button>
       <button onclick="window.editMarker(${marker.id})" style="margin-top: 10px; margin-right: 5px; padding: 5px 10px; background-color: #ffc107; color: black; border: none; border-radius: 4px; cursor: pointer;">
         Edit
       </button>
@@ -142,6 +153,64 @@ const createPopupContent = (marker, markerInstance) => {
     </div>
   `;
 };
+
+// Function to update marker coordinates manually
+const updateMarkerCoordinates = async (markerId) => {
+  const markerInstance = markers.value.find(m => m.id === markerId);
+  if (!markerInstance) return;
+
+  const latInput = document.getElementById(`lat-${markerId}`);
+  const lngInput = document.getElementById(`lng-${markerId}`);
+  const newLat = parseFloat(latInput.value);
+  const newLng = parseFloat(lngInput.value);
+
+  if (isNaN(newLat) || isNaN(newLng)) {
+    alert("Please enter valid latitude and longitude values.");
+    return;
+  }
+
+  // Ensure coordinates are within valid ranges
+  if (newLat < -90 || newLat > 90 || newLng < -180 || newLng > 180) {
+    alert("Latitude must be between -90 and 90, and longitude must be between -180 and 180.");
+    return;
+  }
+
+  try {
+    const response = await $fetch(`/api/markers`, {
+      method: "PUT",
+      body: {
+        id: markerId,
+        latitude: newLat,
+        longitude: newLng,
+        description: markerInstance.marker.getPopup()._content.querySelector('p strong').nextSibling.textContent.trim(),
+        session_hash: sessionHash.value
+      },
+    });
+
+    if (response.success) {
+      // Update marker position on map
+      markerInstance.marker.setLngLat([newLng, newLat]);
+      // Update popup content
+      const markerData = {
+        id: markerId,
+        latitude: newLat,
+        longitude: newLng,
+        description: markerInstance.marker.getPopup()._content.querySelector('p strong').nextSibling.textContent.trim(),
+        picture_url: null,
+        session_hash: sessionHash.value
+      };
+      markerInstance.marker.getPopup().setHTML(createPopupContent(markerData, markerInstance));
+    } else {
+      alert("Failed to update marker coordinates: " + response.error);
+    }
+  } catch (error) {
+    console.error("Error updating marker coordinates:", error);
+    alert("Error updating marker coordinates: " + error.message);
+  }
+};
+
+// Expose updateMarkerCoordinates to global scope for popup button
+window.updateMarkerCoordinates = updateMarkerCoordinates;
 
 // Function to edit marker
 const editMarker = async (markerId) => {
@@ -532,6 +601,7 @@ onUnmounted(() => {
   delete window.removeMarker;
   delete window.editMarker;
   delete window.moveMarker;
+  delete window.updateMarkerCoordinates;
 });
 </script>
 
