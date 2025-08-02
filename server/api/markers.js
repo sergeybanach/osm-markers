@@ -228,7 +228,7 @@ export default defineEventHandler(async (event) => {
   if (method === "PUT") {
     // Update a marker
     const body = await readBody(event);
-    const { id, description, session_hash } = body;
+    const { id, description, latitude, longitude, session_hash } = body;
 
     if (!id || !session_hash) {
       return {
@@ -240,11 +240,14 @@ export default defineEventHandler(async (event) => {
     try {
       const query = `
         UPDATE markers
-        SET description = $1
-        WHERE id = $2 AND session_hash = $3
+        SET 
+          description = COALESCE($1, description),
+          latitude = COALESCE($2, latitude),
+          longitude = COALESCE($3, longitude)
+        WHERE id = $4 AND session_hash = $5
         RETURNING id, latitude, longitude, description, picture_url, session_hash, created_at
       `;
-      const values = [description || "", id, session_hash];
+      const values = [description || null, latitude || null, longitude || null, id, session_hash];
       const result = await pool.query(query, values);
       if (result.rowCount === 0) {
         return {
