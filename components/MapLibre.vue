@@ -397,7 +397,7 @@ const handleMapClick = (e) => {
 // Handle marker placement
 const addMarker = async (e) => {
   const { lng, lat } = e.lngLat;
-  const description = prompt("Enter a description for the marker (optional):");
+  const description = ""; // Set default description (can be edited later via popup)
 
   // Create marker with popup
   const markerData = { latitude: lat, longitude: lng, description, session_hash: sessionHash.value };
