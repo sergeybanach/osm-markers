@@ -35,6 +35,7 @@
 
 <script setup>
 import { ref, onMounted, onUnmounted } from "vue";
+// import { useRoute, useRouter } from "vue-router";
 import maplibregl from "maplibre-gl";
 
 // State for marker placement and movement
@@ -46,8 +47,10 @@ let mapCanvas = null;
 const markers = ref([]);
 
 // Session hash management
-const sessionHash = ref(localStorage.getItem("sessionHash") || "");
-const tempSessionHash = ref(sessionHash.value);
+const route = useRoute();
+const router = useRouter();
+const sessionHash = ref("");
+const tempSessionHash = ref("");
 const showNotification = ref(false);
 const notificationMessage = ref("");
 
@@ -79,16 +82,34 @@ const copyCoordinates = async (latitude, longitude) => {
 
 window.copyCoordinates = copyCoordinates;
 
+// Function to validate session hash format (base64url)
+const isValidSessionHash = (hash) => {
+  if (!hash || typeof hash !== "string") return false;
+  // Base64url regex: letters, numbers, -, _, no padding
+  const base64urlRegex = /^[A-Za-z0-9\-_]+$/;
+  return base64urlRegex.test(hash) && hash.length >= 32;
+};
+
+// Function to update URL with session hash
+const updateUrlWithSessionHash = (hash) => {
+  router.replace({ query: { ...route.query, session_hash: hash } });
+};
+
 // Function to ensure session hash exists and load map position
 const ensureSessionHashAndMapPosition = async () => {
-  if (!sessionHash.value) {
+  // Get session hash from URL
+  let hash = route.query.session_hash;
+
+  // Validate session hash
+  if (!isValidSessionHash(hash)) {
     try {
       const response = await fetch("/api/generate-session-hash");
       const data = await response.json();
       if (data.success) {
-        sessionHash.value = data.sessionHash;
-        tempSessionHash.value = data.sessionHash;
-        localStorage.setItem("sessionHash", sessionHash.value);
+        hash = data.sessionHash;
+        sessionHash.value = hash;
+        tempSessionHash.value = hash;
+        updateUrlWithSessionHash(hash);
       } else {
         console.error("Failed to generate session hash:", data.error);
         alert("Failed to generate session hash: " + data.error);
@@ -99,6 +120,9 @@ const ensureSessionHashAndMapPosition = async () => {
       alert("Error generating session hash: " + error.message);
       return null;
     }
+  } else {
+    sessionHash.value = hash;
+    tempSessionHash.value = hash;
   }
 
   try {
@@ -231,7 +255,7 @@ window.toggleEditDescription = toggleEditDescription;
 
 // Function to save description
 const saveDescription = async (markerId) => {
-  const markerInstance = markers.value.find(m => m.id === markerId);
+  const markerInstance = markers.value.find((m) => m.id === markerId);
   if (!markerInstance) return;
 
   const textarea = document.getElementById(`description-textarea-${markerId}`);
@@ -270,7 +294,7 @@ window.saveDescription = saveDescription;
 
 // Function to update marker coordinates manually
 const updateMarkerCoordinates = async (markerId) => {
-  const markerInstance = markers.value.find(m => m.id === markerId);
+  const markerInstance = markers.value.find((m) => m.id === markerId);
   if (!markerInstance) return;
 
   const latInput = document.getElementById(`lat-${markerId}`);
@@ -295,8 +319,10 @@ const updateMarkerCoordinates = async (markerId) => {
         id: markerId,
         latitude: newLat,
         longitude: newLng,
-        description: document.getElementById(`description-textarea-${markerId}`)?.value ||
-          markerInstance.marker.getPopup()._content.querySelector('span')?.textContent.trim() || "",
+        description:
+          document.getElementById(`description-textarea-${markerId}`)?.value ||
+          markerInstance.marker.getPopup()._content.querySelector("span")?.textContent.trim() ||
+          "",
         session_hash: sessionHash.value,
       },
     });
@@ -325,7 +351,7 @@ window.updateMarkerCoordinates = updateMarkerCoordinates;
 
 // Function to upload image to ImgBB
 const uploadImage = async (markerId) => {
-  const markerInstance = markers.value.find(m => m.id === markerId);
+  const markerInstance = markers.value.find((m) => m.id === markerId);
   if (!markerInstance) return;
 
   const input = document.getElementById(`image-upload-${markerId}`);
@@ -357,8 +383,10 @@ const uploadImage = async (markerId) => {
         method: "PUT",
         body: {
           id: markerId,
-          description: document.getElementById(`description-textarea-${markerId}`)?.value ||
-            markerInstance.marker.getPopup()._content.querySelector('span')?.textContent.trim() || "",
+          description:
+            document.getElementById(`description-textarea-${markerId}`)?.value ||
+            markerInstance.marker.getPopup()._content.querySelector("span")?.textContent.trim() ||
+            "",
           latitude: markerInstance.marker.getLngLat().lat,
           longitude: markerInstance.marker.getLngLat().lng,
           picture_url: imageUrl,
@@ -398,7 +426,7 @@ window.uploadImage = uploadImage;
 
 // Function to move marker
 const moveMarker = (markerId) => {
-  const markerInstance = markers.value.find(m => m.id === markerId);
+  const markerInstance = markers.value.find((m) => m.id === markerId);
   if (!markerInstance) return;
 
   if (isMovingMarker.value && movingMarkerId.value === markerId) {
@@ -409,9 +437,11 @@ const moveMarker = (markerId) => {
       id: markerId,
       latitude: markerInstance.marker.getLngLat().lat,
       longitude: markerInstance.marker.getLngLat().lng,
-      description: document.getElementById(`description-textarea-${markerId}`)?.value ||
-        markerInstance.marker.getPopup()._content.querySelector('span')?.textContent.trim() || "",
-      picture_url: markerInstance.marker.getPopup()._content.querySelector('img')?.src || null,
+      description:
+        document.getElementById(`description-textarea-${markerId}`)?.value ||
+        markerInstance.marker.getPopup()._content.querySelector("span")?.textContent.trim() ||
+        "",
+      picture_url: markerInstance.marker.getPopup()._content.querySelector("img")?.src || null,
       session_hash: sessionHash.value,
     };
     markerInstance.marker.getPopup().setHTML(createPopupContent(markerData, markerInstance));
@@ -424,9 +454,11 @@ const moveMarker = (markerId) => {
       id: markerId,
       latitude: markerInstance.marker.getLngLat().lat,
       longitude: markerInstance.marker.getLngLat().lng,
-      description: document.getElementById(`description-textarea-${markerId}`)?.value ||
-        markerInstance.marker.getPopup()._content.querySelector('span')?.textContent.trim() || "",
-      picture_url: markerInstance.marker.getPopup()._content.querySelector('img')?.src || null,
+      description:
+        document.getElementById(`description-textarea-${markerId}`)?.value ||
+        markerInstance.marker.getPopup()._content.querySelector("span")?.textContent.trim() ||
+        "",
+      picture_url: markerInstance.marker.getPopup()._content.querySelector("img")?.src || null,
       session_hash: sessionHash.value,
     };
     markerInstance.marker.getPopup().setHTML(createPopupContent(markerData, markerInstance));
@@ -439,7 +471,7 @@ window.moveMarker = moveMarker;
 const handleMoveMarker = async (e) => {
   if (!isMovingMarker.value || !movingMarkerId.value) return;
 
-  const markerInstance = markers.value.find(m => m.id === movingMarkerId.value);
+  const markerInstance = markers.value.find((m) => m.id === movingMarkerId.value);
   if (!markerInstance) return;
 
   const { lng, lat } = e.lngLat;
@@ -452,9 +484,11 @@ const handleMoveMarker = async (e) => {
         id: movingMarkerId.value,
         latitude: lat,
         longitude: lng,
-        description: document.getElementById(`description-textarea-${movingMarkerId.value}`)?.value ||
-          markerInstance.marker.getPopup()._content.querySelector('span')?.textContent.trim() || "",
-        picture_url: markerInstance.marker.getPopup()._content.querySelector('img')?.src || null,
+        description:
+          document.getElementById(`description-textarea-${movingMarkerId.value}`)?.value ||
+          markerInstance.marker.getPopup()._content.querySelector("span")?.textContent.trim() ||
+          "",
+        picture_url: markerInstance.marker.getPopup()._content.querySelector("img")?.src || null,
         session_hash: sessionHash.value,
       },
     });
@@ -486,7 +520,7 @@ const handleMoveMarker = async (e) => {
 
 // Function to remove marker
 const removeMarker = async (markerId) => {
-  const markerInstance = markers.value.find(m => m.id === markerId);
+  const markerInstance = markers.value.find((m) => m.id === markerId);
   if (!markerInstance) return;
 
   try {
@@ -497,7 +531,7 @@ const removeMarker = async (markerId) => {
 
     if (response.success) {
       markerInstance.marker.remove();
-      markers.value = markers.value.filter(m => m.id !== markerId);
+      markers.value = markers.value.filter((m) => m.id !== markerId);
     } else {
       alert("Failed to remove marker: " + response.error);
     }
@@ -614,10 +648,10 @@ const loadMarkers = async () => {
     });
 
     if (response.success) {
-      markers.value.forEach(m => {
+      markers.value.forEach((m) => {
         const markerElement = m.marker.getElement();
-        markerElement.removeEventListener("mouseover", () => { });
-        markerElement.removeEventListener("mouseleave", () => { });
+        markerElement.removeEventListener("mouseover", () => {});
+        markerElement.removeEventListener("mouseleave", () => {});
         m.marker.remove();
       });
       markers.value = [];
@@ -663,8 +697,13 @@ const loadMarkers = async () => {
 // Update session hash
 const updateSessionHash = async () => {
   if (tempSessionHash.value && tempSessionHash.value !== sessionHash.value) {
+    if (!isValidSessionHash(tempSessionHash.value)) {
+      alert("Please enter a valid session hash.");
+      tempSessionHash.value = sessionHash.value;
+      return;
+    }
     sessionHash.value = tempSessionHash.value;
-    localStorage.setItem("sessionHash", sessionHash.value);
+    updateUrlWithSessionHash(sessionHash.value);
     const mapPosition = await ensureSessionHashAndMapPosition();
     if (map && mapPosition) {
       map.setCenter([mapPosition.center_longitude, mapPosition.center_latitude]);
@@ -682,14 +721,14 @@ const generateNewHash = async () => {
     if (data.success) {
       sessionHash.value = data.sessionHash;
       tempSessionHash.value = data.sessionHash;
-      localStorage.setItem("sessionHash", sessionHash.value);
+      updateUrlWithSessionHash(sessionHash.value);
       const mapPosition = await ensureSessionHashAndMapPosition();
       if (map && mapPosition) {
         map.setCenter([mapPosition.center_longitude, mapPosition.center_latitude]);
         map.setZoom(mapPosition.zoom_level);
       }
       await loadMarkers();
-      alert("New session hash generated successfully!");
+      triggerNotification("New session hash generated successfully!");
     } else {
       console.error("Failed to generate session hash:", data.error);
       alert("Failed to generate session hash: " + data.error);
@@ -740,7 +779,7 @@ onMounted(async () => {
     trackUserLocation: false,
     showUserHeading: true,
   });
-  map.addControl(geolocateControl, 'top-right');
+  map.addControl(geolocateControl, "top-right");
 
   map.on("click", handleMapClick);
   mapCanvas = map.getCanvas();
