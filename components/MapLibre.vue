@@ -121,19 +121,59 @@ const osmStyle = {
   ],
 };
 
-// Create popup content with remove button
+// Create popup content with edit and remove buttons
 const createPopupContent = (marker, markerInstance) => {
   return `
     <div style="max-width: 200px; padding: 10px;">
       <p><strong>Description:</strong> ${marker.description || "No description"}</p>
       <p><strong>Coordinates:</strong> (${marker.latitude.toFixed(4)}, ${marker.longitude.toFixed(4)})</p>
       ${marker.picture_url ? `<img src="${marker.picture_url}" style="max-width: 100%; height: auto;" alt="Marker image">` : "<p>No image available</p>"}
+      <button onclick="window.editMarker(${marker.id})" style="margin-top: 10px; margin-right: 5px; padding: 5px 10px; background-color: #ffc107; color: black; border: none; border-radius: 4px; cursor: pointer;">
+        Edit
+      </button>
       <button onclick="window.removeMarker(${marker.id})" style="margin-top: 10px; padding: 5px 10px; background-color: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer;">
-        Remove Marker
+        Remove
       </button>
     </div>
   `;
 };
+
+// Function to edit marker
+const editMarker = async (markerId) => {
+  const markerInstance = markers.value.find(m => m.id === markerId);
+  if (!markerInstance) return;
+
+  const newDescription = prompt("Edit marker description:", markerInstance.marker.getPopup()._content.querySelector('p strong').nextSibling.textContent.trim());
+  if (newDescription === null) return; // User cancelled
+
+  try {
+    const response = await $fetch(`/api/markers`, {
+      method: "PUT",
+      body: { id: markerId, description: newDescription, session_hash: sessionHash.value },
+    });
+
+    if (response.success) {
+      // Update marker popup content
+      const markerData = {
+        id: markerId,
+        latitude: markerInstance.marker.getLngLat().lat,
+        longitude: markerInstance.marker.getLngLat().lng,
+        description: newDescription,
+        picture_url: null,
+        session_hash: sessionHash.value
+      };
+      markerInstance.marker.getPopup().setHTML(createPopupContent(markerData, markerInstance));
+    } else {
+      alert("Failed to update marker: " + response.error);
+    }
+  } catch (error) {
+    console.error("Error updating marker:", error);
+    alert("Error updating marker: " + error.message);
+  }
+};
+
+// Expose editMarker to global scope for popup button
+window.editMarker = editMarker;
 
 // Function to remove marker
 const removeMarker = async (markerId) => {
@@ -377,8 +417,9 @@ onUnmounted(() => {
     map.off("moveend", saveMapPosition);
     map.remove();
   }
-  // Remove global function
+  // Remove global functions
   delete window.removeMarker;
+  delete window.editMarker;
 });
 </script>
 

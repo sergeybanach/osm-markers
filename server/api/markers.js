@@ -225,6 +225,46 @@ export default defineEventHandler(async (event) => {
     }
   }
 
+  if (method === "PUT") {
+    // Update a marker
+    const body = await readBody(event);
+    const { id, description, session_hash } = body;
+
+    if (!id || !session_hash) {
+      return {
+        success: false,
+        error: "Marker ID and session hash are required",
+      };
+    }
+
+    try {
+      const query = `
+        UPDATE markers
+        SET description = $1
+        WHERE id = $2 AND session_hash = $3
+        RETURNING id, latitude, longitude, description, picture_url, session_hash, created_at
+      `;
+      const values = [description || "", id, session_hash];
+      const result = await pool.query(query, values);
+      if (result.rowCount === 0) {
+        return {
+          success: false,
+          error: "Marker not found or session hash mismatch",
+        };
+      }
+      return {
+        success: true,
+        marker: result.rows[0],
+      };
+    } catch (error) {
+      console.error("Error updating marker:", error.message, error.stack);
+      return {
+        success: false,
+        error: `Failed to update marker: ${error.message}`,
+      };
+    }
+  }
+
   if (method === "DELETE") {
     // Remove a marker
     const body = await readBody(event);
