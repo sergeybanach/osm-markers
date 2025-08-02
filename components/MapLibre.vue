@@ -647,16 +647,14 @@ const copySessionHash = async () => {
   }
 };
 
-// Select and copy session hash on input click
-const selectAndCopyHash = async (event) => {
+// Select session hash on input click (without copying)
+const selectAndCopyHash = (event) => {
   try {
     const input = event.target;
     input.select(); // Select all text in the input
-    await navigator.clipboard.writeText(tempSessionHash.value);
-    triggerNotification();
   } catch (error) {
-    console.error("Error selecting and copying session hash:", error);
-    alert("Failed to copy session hash: " + error.message);
+    console.error("Error selecting session hash:", error);
+    alert("Failed to select session hash: " + error.message);
   }
 };
 
