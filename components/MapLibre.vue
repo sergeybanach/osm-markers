@@ -6,16 +6,16 @@
     </button>
 
     <div style="position: absolute; bottom: 40px; left: 10px; z-index: 50;">
-      <label for="sessionHashInput">Session Hash: </label>
+      <!-- <label for="sessionHashInput">Session Hash: </label>
       <input id="sessionHashInput" v-model="tempSessionHash" type="text" style="margin-right: 5px;"
-        @click="selectAndCopyHash" />
-      <button @click="updateSessionHash"
+        @click="selectAndCopyHash" /> -->
+      <!-- <button @click="updateSessionHash"
         style="padding: 4px 8px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">
         Update
-      </button>
+      </button> -->
       <button @click="copySessionHash"
         style="padding: 4px 8px; background-color: #17a2b8; color: white; border: none; border-radius: 4px; cursor: pointer; margin-left: 5px;">
-        Copy
+        Copy Url
       </button>
       <button @click="generateNewHash"
         style="padding: 4px 8px; background-color: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer; margin-left: 5px;">
@@ -650,8 +650,8 @@ const loadMarkers = async () => {
     if (response.success) {
       markers.value.forEach((m) => {
         const markerElement = m.marker.getElement();
-        markerElement.removeEventListener("mouseover", () => {});
-        markerElement.removeEventListener("mouseleave", () => {});
+        markerElement.removeEventListener("mouseover", () => { });
+        markerElement.removeEventListener("mouseleave", () => { });
         m.marker.remove();
       });
       markers.value = [];
@@ -739,14 +739,17 @@ const generateNewHash = async () => {
   }
 };
 
-// Copy session hash to clipboard
+// Copy full URL with session hash to clipboard
 const copySessionHash = async () => {
   try {
-    await navigator.clipboard.writeText(sessionHash.value);
-    triggerNotification("Session hash copied to clipboard!");
+    // Construct the full URL with the session hash
+    const baseUrl = window.location.origin; // Gets the base URL (e.g., http://localhost:3000)
+    const fullUrl = `${baseUrl}?session_hash=${encodeURIComponent(sessionHash.value)}`;
+    await navigator.clipboard.writeText(fullUrl);
+    triggerNotification("URL with session hash copied to clipboard!");
   } catch (error) {
-    console.error("Error copying session hash:", error);
-    alert("Failed to copy session hash: " + error.message);
+    console.error("Error copying URL:", error);
+    alert("Failed to copy URL: " + error.message);
   }
 };
 
