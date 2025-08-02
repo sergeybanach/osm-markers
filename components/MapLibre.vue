@@ -146,18 +146,31 @@ const createPopupContent = (marker, markerInstance) => {
         </div>
       </div>
       <p><strong>Coordinates:</strong></p>
-      <div>
-        <label>Latitude: </label>
-        <input type="number" id="lat-${marker.id}" value="${marker.latitude.toFixed(4)}" step="any" style="width: 100px; margin-bottom: 5px;" />
+      <div id="coords-display-${marker.id}">
+        <p>Latitude: <span>${marker.latitude.toFixed(4)}</span>
+           <button onclick="window.toggleEditCoordinates(${marker.id})" style="margin-left: 5px; padding: 2px 6px; background-color: #ffc107; color: black; border: none; border-radius: 4px; cursor: pointer;">
+             Edit
+           </button>
+        </p>
+        <p>Longitude: <span>${marker.longitude.toFixed(4)}</span></p>
       </div>
-      <div>
-        <label>Longitude: </label>
-        <input type="number" id="lng-${marker.id}" value="${marker.longitude.toFixed(4)}" step="any" style="width: 100px; margin-bottom: 10px;" />
+      <div id="coords-edit-${marker.id}" style="display: none;">
+        <div>
+          <label>Latitude: </label>
+          <input type="number" id="lat-${marker.id}" value="${marker.latitude.toFixed(4)}" step="any" style="width: 100px; margin-bottom: 5px;" />
+        </div>
+        <div>
+          <label>Longitude: </label>
+          <input type="number" id="lng-${marker.id}" value="${marker.longitude.toFixed(4)}" step="any" style="width: 100px; margin-bottom: 10px;" />
+        </div>
+        <button onclick="window.updateMarkerCoordinates(${marker.id})" style="margin-top: 10px; margin-right: 5px; padding: 5px 10px; background-color: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer;">
+          Update Coordinates
+        </button>
+        <button onclick="window.toggleEditCoordinates(${marker.id})" style="margin-top: 10px; margin-right: 5px; padding: 5px 10px; background-color: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer;">
+          Cancel
+        </button>
       </div>
       ${marker.picture_url ? `<img src="${marker.picture_url}" style="max-width: 100%; height: auto;" alt="Marker image">` : "<p>No image available</p>"}
-      <button onclick="window.updateMarkerCoordinates(${marker.id})" style="margin-top: 10px; margin-right: 5px; padding: 5px 10px; background-color: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer;">
-        Update Coordinates
-      </button>
       <button onclick="window.moveMarker(${marker.id})" style="margin-top: 10px; margin-right: 5px; padding: 5px 10px; background-color: #17a2b8; color: white; border: none; border-radius: 4px; cursor: pointer;">
         ${isMovingMarker.value && movingMarkerId.value === marker.id ? "Moving" : "Move Marker"}
       </button>
@@ -167,6 +180,20 @@ const createPopupContent = (marker, markerInstance) => {
     </div>
   `;
 };
+
+// Function to toggle coordinates editing
+const toggleEditCoordinates = (markerId) => {
+  const displayDiv = document.getElementById(`coords-display-${markerId}`);
+  const editDiv = document.getElementById(`coords-edit-${markerId}`);
+  if (displayDiv && editDiv) {
+    const isEditing = editDiv.style.display === "none";
+    displayDiv.style.display = isEditing ? "none" : "block";
+    editDiv.style.display = isEditing ? "block" : "none";
+  }
+};
+
+// Expose toggleEditCoordinates to global scope
+window.toggleEditCoordinates = toggleEditCoordinates;
 
 // Function to toggle description editing
 const toggleEditDescription = (markerId) => {
@@ -687,6 +714,7 @@ onUnmounted(() => {
   delete window.updateMarkerCoordinates;
   delete window.toggleEditDescription;
   delete window.saveDescription;
+  delete window.toggleEditCoordinates;
 });
 </script>
 
