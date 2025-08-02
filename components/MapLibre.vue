@@ -575,6 +575,17 @@ onMounted(async () => {
   // Add navigation controls
   map.addControl(new maplibregl.NavigationControl());
 
+  // Add geolocation control
+  const geolocateControl = new maplibregl.GeolocateControl({
+    positionOptions: {
+      enableHighAccuracy: true,
+      timeout: 6000,
+    },
+    trackUserLocation: false,
+    showUserHeading: true,
+  });
+  map.addControl(geolocateControl, 'top-right');
+
   // Add click event listener for marker placement and movement
   map.on("click", handleMapClick);
 
