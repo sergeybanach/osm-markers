@@ -49,7 +49,7 @@ const markers = ref([]);
 const sessionHash = ref(localStorage.getItem("sessionHash") || "");
 const tempSessionHash = ref(sessionHash.value);
 const showNotification = ref(false);
-const notificationMessage = ref(""); // Updated to handle different messages
+const notificationMessage = ref("");
 
 // Default map position
 const defaultCenter = [0, 0];
@@ -64,6 +64,20 @@ const triggerNotification = (message) => {
     notificationMessage.value = "";
   }, 2000);
 };
+
+// Function to copy coordinates to clipboard
+const copyCoordinates = async (latitude, longitude) => {
+  try {
+    const coordsText = `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
+    await navigator.clipboard.writeText(coordsText);
+    triggerNotification("Coordinates copied to clipboard!");
+  } catch (error) {
+    console.error("Error copying coordinates:", error);
+    alert("Failed to copy coordinates: " + error.message);
+  }
+};
+
+window.copyCoordinates = copyCoordinates;
 
 // Function to ensure session hash exists and load map position
 const ensureSessionHashAndMapPosition = async () => {
@@ -125,6 +139,7 @@ const osmStyle = {
   ],
 };
 
+// Create popup content with editable coordinates, description, image upload, and buttons
 const createPopupContent = (marker, markerInstance) => {
   return `
     <div style="max-width: 200px; padding: 10px;">
@@ -148,7 +163,7 @@ const createPopupContent = (marker, markerInstance) => {
       </div>
       <p><strong>Coordinates:</strong></p>
       <div id="coords-display-${marker.id}">
-        <p><span>${marker.latitude.toFixed(6)}, ${marker.longitude.toFixed(6)}</span>
+        <p><span style="cursor: pointer; text-decoration: underline;" onclick="window.copyCoordinates(${marker.latitude}, ${marker.longitude})">${marker.latitude.toFixed(6)}, ${marker.longitude.toFixed(6)}</span>
            <button onclick="window.toggleEditCoordinates(${marker.id})" style="margin-left: 5px; padding: 2px 6px; background-color: #ffc107; color: black; border: none; border-radius: 4px; cursor: pointer;">
              Edit
            </button>
@@ -322,11 +337,10 @@ const uploadImage = async (markerId) => {
   const file = input.files[0];
   const formData = new FormData();
   formData.append("image", file);
-  formData.append("key", "c277e737512fa76999c54361689baec3"); // ImgBB API key
-  formData.append("expiration", "600"); // 10 minutes expiration
+  formData.append("key", "c277e737512fa76999c54361689baec3");
+  formData.append("expiration", "600");
 
   try {
-    // Disable upload button during upload
     const uploadButton = document.querySelector(`#image-upload-${markerId} + button`);
     uploadButton.disabled = true;
     uploadButton.textContent = "Uploading...";
@@ -339,7 +353,6 @@ const uploadImage = async (markerId) => {
 
     if (data.success) {
       const imageUrl = data.data.url;
-      // Update marker in database with image URL
       const updateResponse = await $fetch(`/api/markers`, {
         method: "PUT",
         body: {
@@ -354,7 +367,6 @@ const uploadImage = async (markerId) => {
       });
 
       if (updateResponse.success) {
-        // Update popup with new image
         const markerData = {
           id: markerId,
           latitude: markerInstance.marker.getLngLat().lat,
@@ -375,11 +387,9 @@ const uploadImage = async (markerId) => {
     console.error("Error uploading image:", error);
     alert("Error uploading image: " + error.message);
   } finally {
-    // Re-enable upload button
     const uploadButton = document.querySelector(`#image-upload-${markerId} + button`);
     uploadButton.disabled = false;
     uploadButton.textContent = "Upload";
-    // Clear the file input
     input.value = "";
   }
 };
@@ -755,6 +765,7 @@ onUnmounted(() => {
   delete window.saveDescription;
   delete window.toggleEditCoordinates;
   delete window.uploadImage;
+  delete window.copyCoordinates;
 });
 </script>
 
