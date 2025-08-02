@@ -715,20 +715,37 @@ const updateSessionHash = async () => {
 
 // Generate new session hash
 const generateNewHash = async () => {
+  // Show confirmation alert
+  const confirm = window.confirm(
+    "Generating a new session hash will clear all existing markers and map data for the current session. Are you sure you want to proceed?"
+  );
+  if (!confirm) return; // Exit if user cancels
+
   try {
+    // Clear existing markers from the map and database
+    for (const marker of markers.value) {
+      await removeMarker(marker.id); // Use existing removeMarker function to delete from database and map
+    }
+    markers.value = []; // Clear the markers array
+
+    // Generate new session hash
     const response = await fetch("/api/generate-session-hash");
     const data = await response.json();
     if (data.success) {
       sessionHash.value = data.sessionHash;
       tempSessionHash.value = data.sessionHash;
       updateUrlWithSessionHash(sessionHash.value);
-      const mapPosition = await ensureSessionHashAndMapPosition();
-      if (map && mapPosition) {
-        map.setCenter([mapPosition.center_longitude, mapPosition.center_latitude]);
-        map.setZoom(mapPosition.zoom_level);
+
+      // Reset map to default position
+      if (map) {
+        map.setCenter(defaultCenter);
+        map.setZoom(defaultZoom);
       }
-      await loadMarkers();
-      triggerNotification("New session hash generated successfully!");
+
+      // Save the new map position
+      await saveMapPosition();
+
+      triggerNotification("New session hash generated and markers cleared successfully!");
     } else {
       console.error("Failed to generate session hash:", data.error);
       alert("Failed to generate session hash: " + data.error);
