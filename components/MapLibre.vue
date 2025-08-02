@@ -123,11 +123,28 @@ const osmStyle = {
   ],
 };
 
-// Create popup content with editable coordinates, edit, move, and remove buttons
+// Create popup content with editable coordinates, textarea for description, and buttons
 const createPopupContent = (marker, markerInstance) => {
   return `
     <div style="max-width: 200px; padding: 10px;">
-      <p><strong>Description:</strong> ${marker.description || "No description"}</p>
+      <div style="display: flex; align-items: center; margin-bottom: 10px;">
+        <strong style="margin-right: 5px;">Description:</strong>
+        <div id="description-display-${marker.id}">
+          <span>${marker.description || "No description"}</span>
+          <button onclick="window.toggleEditDescription(${marker.id})" style="margin-left: 5px; padding: 2px 6px; background-color: #ffc107; color: black; border: none; border-radius: 4px; cursor: pointer;">
+            Edit
+          </button>
+        </div>
+        <div id="description-edit-${marker.id}" style="display: none;">
+          <textarea id="description-textarea-${marker.id}" style="width: 100%; min-height: 50px; margin-bottom: 5px;">${marker.description || ""}</textarea>
+          <button onclick="window.saveDescription(${marker.id})" style="padding: 2px 6px; background-color: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer;">
+            Save
+          </button>
+          <button onclick="window.toggleEditDescription(${marker.id})" style="padding: 2px 6px; background-color: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer; margin-left: 5px;">
+            Cancel
+          </button>
+        </div>
+      </div>
       <p><strong>Coordinates:</strong></p>
       <div>
         <label>Latitude: </label>
@@ -141,9 +158,6 @@ const createPopupContent = (marker, markerInstance) => {
       <button onclick="window.updateMarkerCoordinates(${marker.id})" style="margin-top: 10px; margin-right: 5px; padding: 5px 10px; background-color: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer;">
         Update Coordinates
       </button>
-      <button onclick="window.editMarker(${marker.id})" style="margin-top: 10px; margin-right: 5px; padding: 5px 10px; background-color: #ffc107; color: black; border: none; border-radius: 4px; cursor: pointer;">
-        Edit
-      </button>
       <button onclick="window.moveMarker(${marker.id})" style="margin-top: 10px; margin-right: 5px; padding: 5px 10px; background-color: #17a2b8; color: white; border: none; border-radius: 4px; cursor: pointer;">
         ${isMovingMarker.value && movingMarkerId.value === marker.id ? "Moving" : "Move Marker"}
       </button>
@@ -153,6 +167,61 @@ const createPopupContent = (marker, markerInstance) => {
     </div>
   `;
 };
+
+// Function to toggle description editing
+const toggleEditDescription = (markerId) => {
+  const displayDiv = document.getElementById(`description-display-${markerId}`);
+  const editDiv = document.getElementById(`description-edit-${markerId}`);
+  if (displayDiv && editDiv) {
+    const isEditing = editDiv.style.display === "none";
+    displayDiv.style.display = isEditing ? "none" : "flex";
+    editDiv.style.display = isEditing ? "block" : "none";
+  }
+};
+
+// Expose toggleEditDescription to global scope
+window.toggleEditDescription = toggleEditDescription;
+
+// Function to save description
+const saveDescription = async (markerId) => {
+  const markerInstance = markers.value.find(m => m.id === markerId);
+  if (!markerInstance) return;
+
+  const textarea = document.getElementById(`description-textarea-${markerId}`);
+  const newDescription = textarea.value;
+
+  try {
+    const response = await $fetch(`/api/markers`, {
+      method: "PUT",
+      body: {
+        id: markerId,
+        description: newDescription,
+        session_hash: sessionHash.value,
+      },
+    });
+
+    if (response.success) {
+      // Update popup content
+      const markerData = {
+        id: markerId,
+        latitude: markerInstance.marker.getLngLat().lat,
+        longitude: markerInstance.marker.getLngLat().lng,
+        description: newDescription,
+        picture_url: null,
+        session_hash: sessionHash.value,
+      };
+      markerInstance.marker.getPopup().setHTML(createPopupContent(markerData, markerInstance));
+    } else {
+      alert("Failed to update description: " + response.error);
+    }
+  } catch (error) {
+    console.error("Error updating description:", error);
+    alert("Error updating description: " + error.message);
+  }
+};
+
+// Expose saveDescription to global scope
+window.saveDescription = saveDescription;
 
 // Function to update marker coordinates manually
 const updateMarkerCoordinates = async (markerId) => {
@@ -182,8 +251,9 @@ const updateMarkerCoordinates = async (markerId) => {
         id: markerId,
         latitude: newLat,
         longitude: newLng,
-        description: markerInstance.marker.getPopup()._content.querySelector('p strong').nextSibling.textContent.trim(),
-        session_hash: sessionHash.value
+        description: document.getElementById(`description-textarea-${markerId}`)?.value || 
+                     markerInstance.marker.getPopup()._content.querySelector('span')?.textContent.trim() || "",
+        session_hash: sessionHash.value,
       },
     });
 
@@ -195,9 +265,9 @@ const updateMarkerCoordinates = async (markerId) => {
         id: markerId,
         latitude: newLat,
         longitude: newLng,
-        description: markerInstance.marker.getPopup()._content.querySelector('p strong').nextSibling.textContent.trim(),
+        description: response.marker.description,
         picture_url: null,
-        session_hash: sessionHash.value
+        session_hash: sessionHash.value,
       };
       markerInstance.marker.getPopup().setHTML(createPopupContent(markerData, markerInstance));
     } else {
@@ -211,43 +281,6 @@ const updateMarkerCoordinates = async (markerId) => {
 
 // Expose updateMarkerCoordinates to global scope for popup button
 window.updateMarkerCoordinates = updateMarkerCoordinates;
-
-// Function to edit marker
-const editMarker = async (markerId) => {
-  const markerInstance = markers.value.find(m => m.id === markerId);
-  if (!markerInstance) return;
-
-  const newDescription = prompt("Edit marker description:", markerInstance.marker.getPopup()._content.querySelector('p strong').nextSibling.textContent.trim());
-  if (newDescription === null) return; // User cancelled
-
-  try {
-    const response = await $fetch(`/api/markers`, {
-      method: "PUT",
-      body: { id: markerId, description: newDescription, session_hash: sessionHash.value },
-    });
-
-    if (response.success) {
-      // Update marker popup content
-      const markerData = {
-        id: markerId,
-        latitude: markerInstance.marker.getLngLat().lat,
-        longitude: markerInstance.marker.getLngLat().lng,
-        description: newDescription,
-        picture_url: null,
-        session_hash: sessionHash.value
-      };
-      markerInstance.marker.getPopup().setHTML(createPopupContent(markerData, markerInstance));
-    } else {
-      alert("Failed to update marker: " + response.error);
-    }
-  } catch (error) {
-    console.error("Error updating marker:", error);
-    alert("Error updating marker: " + error.message);
-  }
-};
-
-// Expose editMarker to global scope for popup button
-window.editMarker = editMarker;
 
 // Function to move marker
 const moveMarker = (markerId) => {
@@ -264,9 +297,10 @@ const moveMarker = (markerId) => {
       id: markerId,
       latitude: markerInstance.marker.getLngLat().lat,
       longitude: markerInstance.marker.getLngLat().lng,
-      description: markerInstance.marker.getPopup()._content.querySelector('p strong').nextSibling.textContent.trim(),
+      description: document.getElementById(`description-textarea-${markerId}`)?.value || 
+                   markerInstance.marker.getPopup()._content.querySelector('span')?.textContent.trim() || "",
       picture_url: null,
-      session_hash: sessionHash.value
+      session_hash: sessionHash.value,
     };
     markerInstance.marker.getPopup().setHTML(createPopupContent(markerData, markerInstance));
   } else {
@@ -280,9 +314,10 @@ const moveMarker = (markerId) => {
       id: markerId,
       latitude: markerInstance.marker.getLngLat().lat,
       longitude: markerInstance.marker.getLngLat().lng,
-      description: markerInstance.marker.getPopup()._content.querySelector('p strong').nextSibling.textContent.trim(),
+      description: document.getElementById(`description-textarea-${markerId}`)?.value || 
+                   markerInstance.marker.getPopup()._content.querySelector('span')?.textContent.trim() || "",
       picture_url: null,
-      session_hash: sessionHash.value
+      session_hash: sessionHash.value,
     };
     markerInstance.marker.getPopup().setHTML(createPopupContent(markerData, markerInstance));
   }
@@ -311,8 +346,9 @@ const handleMoveMarker = async (e) => {
         id: movingMarkerId.value,
         latitude: lat,
         longitude: lng,
-        description: markerInstance.marker.getPopup()._content.querySelector('p strong').nextSibling.textContent.trim(),
-        session_hash: sessionHash.value
+        description: document.getElementById(`description-textarea-${movingMarkerId.value}`)?.value || 
+                     markerInstance.marker.getPopup()._content.querySelector('span')?.textContent.trim() || "",
+        session_hash: sessionHash.value,
       },
     });
 
@@ -322,9 +358,9 @@ const handleMoveMarker = async (e) => {
         id: movingMarkerId.value,
         latitude: lat,
         longitude: lng,
-        description: markerInstance.marker.getPopup()._content.querySelector('p strong').nextSibling.textContent.trim(),
+        description: response.marker.description,
         picture_url: null,
-        session_hash: sessionHash.value
+        session_hash: sessionHash.value,
       };
       markerInstance.marker.getPopup().setHTML(createPopupContent(markerData, markerInstance));
     } else {
@@ -647,9 +683,10 @@ onUnmounted(() => {
   }
   // Remove global functions
   delete window.removeMarker;
-  delete window.editMarker;
   delete window.moveMarker;
   delete window.updateMarkerCoordinates;
+  delete window.toggleEditDescription;
+  delete window.saveDescription;
 });
 </script>
 
