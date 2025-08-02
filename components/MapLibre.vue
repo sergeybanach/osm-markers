@@ -28,7 +28,8 @@
       {{ notificationMessage }}
     </div>
 
-    <div id="map" :class="{ 'adding-marker': isAddingMarker, 'moving-marker': isMovingMarker }" style="width: 100%; height: 100vh"></div>
+    <div id="map" :class="{ 'adding-marker': isAddingMarker, 'moving-marker': isMovingMarker }"
+      style="width: 100%; height: 100vh"></div>
   </div>
 </template>
 
@@ -124,7 +125,6 @@ const osmStyle = {
   ],
 };
 
-// Create popup content with editable coordinates, description, image upload, and buttons
 const createPopupContent = (marker, markerInstance) => {
   return `
     <div style="max-width: 200px; padding: 10px;">
@@ -148,21 +148,20 @@ const createPopupContent = (marker, markerInstance) => {
       </div>
       <p><strong>Coordinates:</strong></p>
       <div id="coords-display-${marker.id}">
-        <p>Latitude: <span>${marker.latitude.toFixed(4)}</span>
+        <p><span>${marker.latitude.toFixed(6)}, ${marker.longitude.toFixed(6)}</span>
            <button onclick="window.toggleEditCoordinates(${marker.id})" style="margin-left: 5px; padding: 2px 6px; background-color: #ffc107; color: black; border: none; border-radius: 4px; cursor: pointer;">
              Edit
            </button>
         </p>
-        <p>Longitude: <span>${marker.longitude.toFixed(4)}</span></p>
       </div>
       <div id="coords-edit-${marker.id}" style="display: none;">
         <div>
           <label>Latitude: </label>
-          <input type="number" id="lat-${marker.id}" value="${marker.latitude.toFixed(4)}" step="any" style="width: 100px; margin-bottom: 5px;" />
+          <input type="number" id="lat-${marker.id}" value="${marker.latitude.toFixed(6)}" step="any" style="width: 100px; margin-bottom: 5px;" />
         </div>
         <div>
           <label>Longitude: </label>
-          <input type="number" id="lng-${marker.id}" value="${marker.longitude.toFixed(4)}" step="any" style="width: 100px; margin-bottom: 10px;" />
+          <input type="number" id="lng-${marker.id}" value="${marker.longitude.toFixed(6)}" step="any" style="width: 100px; margin-bottom: 10px;" />
         </div>
         <button onclick="window.updateMarkerCoordinates(${marker.id})" style="margin-top: 10px; margin-right: 5px; padding: 5px 10px; background-color: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer;">
           Update Coordinates
@@ -281,8 +280,8 @@ const updateMarkerCoordinates = async (markerId) => {
         id: markerId,
         latitude: newLat,
         longitude: newLng,
-        description: document.getElementById(`description-textarea-${markerId}`)?.value || 
-                     markerInstance.marker.getPopup()._content.querySelector('span')?.textContent.trim() || "",
+        description: document.getElementById(`description-textarea-${markerId}`)?.value ||
+          markerInstance.marker.getPopup()._content.querySelector('span')?.textContent.trim() || "",
         session_hash: sessionHash.value,
       },
     });
@@ -345,8 +344,8 @@ const uploadImage = async (markerId) => {
         method: "PUT",
         body: {
           id: markerId,
-          description: document.getElementById(`description-textarea-${markerId}`)?.value || 
-                       markerInstance.marker.getPopup()._content.querySelector('span')?.textContent.trim() || "",
+          description: document.getElementById(`description-textarea-${markerId}`)?.value ||
+            markerInstance.marker.getPopup()._content.querySelector('span')?.textContent.trim() || "",
           latitude: markerInstance.marker.getLngLat().lat,
           longitude: markerInstance.marker.getLngLat().lng,
           picture_url: imageUrl,
@@ -400,8 +399,8 @@ const moveMarker = (markerId) => {
       id: markerId,
       latitude: markerInstance.marker.getLngLat().lat,
       longitude: markerInstance.marker.getLngLat().lng,
-      description: document.getElementById(`description-textarea-${markerId}`)?.value || 
-                   markerInstance.marker.getPopup()._content.querySelector('span')?.textContent.trim() || "",
+      description: document.getElementById(`description-textarea-${markerId}`)?.value ||
+        markerInstance.marker.getPopup()._content.querySelector('span')?.textContent.trim() || "",
       picture_url: markerInstance.marker.getPopup()._content.querySelector('img')?.src || null,
       session_hash: sessionHash.value,
     };
@@ -415,8 +414,8 @@ const moveMarker = (markerId) => {
       id: markerId,
       latitude: markerInstance.marker.getLngLat().lat,
       longitude: markerInstance.marker.getLngLat().lng,
-      description: document.getElementById(`description-textarea-${markerId}`)?.value || 
-                   markerInstance.marker.getPopup()._content.querySelector('span')?.textContent.trim() || "",
+      description: document.getElementById(`description-textarea-${markerId}`)?.value ||
+        markerInstance.marker.getPopup()._content.querySelector('span')?.textContent.trim() || "",
       picture_url: markerInstance.marker.getPopup()._content.querySelector('img')?.src || null,
       session_hash: sessionHash.value,
     };
@@ -443,8 +442,8 @@ const handleMoveMarker = async (e) => {
         id: movingMarkerId.value,
         latitude: lat,
         longitude: lng,
-        description: document.getElementById(`description-textarea-${movingMarkerId.value}`)?.value || 
-                     markerInstance.marker.getPopup()._content.querySelector('span')?.textContent.trim() || "",
+        description: document.getElementById(`description-textarea-${movingMarkerId.value}`)?.value ||
+          markerInstance.marker.getPopup()._content.querySelector('span')?.textContent.trim() || "",
         picture_url: markerInstance.marker.getPopup()._content.querySelector('img')?.src || null,
         session_hash: sessionHash.value,
       },
@@ -607,8 +606,8 @@ const loadMarkers = async () => {
     if (response.success) {
       markers.value.forEach(m => {
         const markerElement = m.marker.getElement();
-        markerElement.removeEventListener("mouseover", () => {});
-        markerElement.removeEventListener("mouseleave", () => {});
+        markerElement.removeEventListener("mouseover", () => { });
+        markerElement.removeEventListener("mouseleave", () => { });
         m.marker.remove();
       });
       markers.value = [];
@@ -821,10 +820,25 @@ onUnmounted(() => {
 }
 
 @keyframes fadeInOut {
-  0% { opacity: 0; transform: translate(-50%, -10px); }
-  10% { opacity: 1; transform: translate(-50%, 0); }
-  90% { opacity: 1; transform: translate(-50%, 0); }
-  100% { opacity: 0; transform: translate(-50%, -10px); }
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -10px);
+  }
+
+  10% {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+
+  90% {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -10px);
+  }
 }
 
 @media (max-width: 768px) {
