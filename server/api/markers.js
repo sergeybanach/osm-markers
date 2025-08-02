@@ -56,13 +56,26 @@ const initializeDatabase = async () => {
           latitude DOUBLE PRECISION NOT NULL,
           longitude DOUBLE PRECISION NOT NULL,
           description TEXT,
-          picture_url TEXT,
           session_hash TEXT NOT NULL,
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
       `);
       console.log("Markers table created successfully");
     } else {
+      // Check if picture_url column exists and drop it
+      const pictureUrlCheck = await pool.query(`
+        SELECT EXISTS (
+          SELECT FROM information_schema.columns
+          WHERE table_schema = 'public'
+          AND table_name = 'markers'
+          AND column_name = 'picture_url'
+        )
+      `);
+      if (pictureUrlCheck.rows[0].exists) {
+        console.log("Dropping picture_url column from markers table");
+        await pool.query(`ALTER TABLE markers DROP COLUMN picture_url`);
+        console.log("picture_url column dropped successfully");
+      }
       // Check if session_hash column exists
       const columnCheck = await pool.query(`
         SELECT EXISTS (
@@ -77,6 +90,27 @@ const initializeDatabase = async () => {
         await pool.query(`ALTER TABLE markers ADD COLUMN session_hash TEXT NOT NULL DEFAULT ''`);
         console.log("session_hash column added successfully");
       }
+    }
+
+    // Check and create marker_images table
+    const imagesTableCheck = await pool.query(
+      `SELECT EXISTS (
+        SELECT FROM information_schema.tables
+        WHERE table_schema = 'public'
+        AND table_name = 'marker_images'
+      )`
+    );
+    if (!imagesTableCheck.rows[0].exists) {
+      console.log("Creating marker_images table");
+      await pool.query(`
+        CREATE TABLE marker_images (
+          id SERIAL PRIMARY KEY,
+          marker_id INTEGER NOT NULL REFERENCES markers(id) ON DELETE CASCADE,
+          image_url TEXT NOT NULL,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+      console.log("Marker_images table created successfully");
     }
 
     // Check and create map_positions table
@@ -129,11 +163,16 @@ export default defineEventHandler(async (event) => {
     }
 
     try {
-      // Fetch markers
+      // Fetch markers with their images
       const markersQuery = `
-        SELECT id, latitude, longitude, description, picture_url, session_hash, created_at
-        FROM markers
-        WHERE session_hash = $1
+        SELECT m.id, m.latitude, m.longitude, m.description, m.session_hash, m.created_at,
+               COALESCE(
+                 (SELECT json_agg(json_build_object('id', mi.id, 'image_url', mi.image_url, 'created_at', mi.created_at))
+                  FROM marker_images mi WHERE mi.marker_id = m.id),
+                 '[]'::json
+               ) as images
+        FROM markers m
+        WHERE m.session_hash = $1
       `;
       const markersResult = await pool.query(markersQuery, [sessionHash]);
 
@@ -160,9 +199,9 @@ export default defineEventHandler(async (event) => {
   }
 
   if (method === "POST") {
-    // Save a new marker or map position
+    // Save a new marker, image, or map position
     const body = await readBody(event);
-    const { latitude, longitude, description, picture_url, session_hash, center_longitude, center_latitude, zoom_level } = body;
+    const { latitude, longitude, description, image_url, marker_id, session_hash, center_longitude, center_latitude, zoom_level } = body;
 
     if (!session_hash) {
       return {
@@ -175,21 +214,33 @@ export default defineEventHandler(async (event) => {
       if (latitude !== undefined && longitude !== undefined) {
         // Save marker
         const query = `
-          INSERT INTO markers (latitude, longitude, description, picture_url, session_hash)
-          VALUES ($1, $2, $3, $4, $5)
-          RETURNING id, latitude, longitude, description, picture_url, session_hash, created_at
+          INSERT INTO markers (latitude, longitude, description, session_hash)
+          VALUES ($1, $2, $3, $4)
+          RETURNING id, latitude, longitude, description, session_hash, created_at
         `;
         const values = [
           latitude,
           longitude,
           description || "",
-          picture_url || null,
           session_hash,
         ];
         const result = await pool.query(query, values);
         return {
           success: true,
-          marker: result.rows[0],
+          marker: { ...result.rows[0], images: [] },
+        };
+      } else if (image_url !== undefined && marker_id !== undefined) {
+        // Save image for a marker
+        const query = `
+          INSERT INTO marker_images (marker_id, image_url)
+          VALUES ($1, $2)
+          RETURNING id, marker_id, image_url, created_at
+        `;
+        const values = [marker_id, image_url];
+        const result = await pool.query(query, values);
+        return {
+          success: true,
+          image: result.rows[0],
         };
       } else if (center_longitude !== undefined && center_latitude !== undefined && zoom_level !== undefined) {
         // Save or update map position
@@ -228,7 +279,7 @@ export default defineEventHandler(async (event) => {
   if (method === "PUT") {
     // Update a marker
     const body = await readBody(event);
-    const { id, description, latitude, longitude, picture_url, session_hash } = body;
+    const { id, description, latitude, longitude, session_hash } = body;
 
     if (!id || !session_hash) {
       return {
@@ -239,16 +290,20 @@ export default defineEventHandler(async (event) => {
 
     try {
       const query = `
-      UPDATE markers
-      SET 
-        description = COALESCE($1, description),
-        latitude = COALESCE($2, latitude),
-        longitude = COALESCE($3, longitude),
-        picture_url = COALESCE($4, picture_url)
-      WHERE id = $5 AND session_hash = $6
-      RETURNING id, latitude, longitude, description, picture_url, session_hash, created_at
-    `;
-      const values = [description || null, latitude || null, longitude || null, picture_url || null, id, session_hash];
+        UPDATE markers
+        SET 
+          description = COALESCE($1, description),
+          latitude = COALESCE($2, latitude),
+          longitude = COALESCE($3, longitude)
+        WHERE id = $4 AND session_hash = $5
+        RETURNING id, latitude, longitude, description, session_hash, created_at,
+                  COALESCE(
+                    (SELECT json_agg(json_build_object('id', mi.id, 'image_url', mi.image_url, 'created_at', mi.created_at))
+                     FROM marker_images mi WHERE mi.marker_id = markers.id),
+                    '[]'::json
+                  ) as images
+      `;
+      const values = [description || null, latitude || null, longitude || null, id, session_hash];
       const result = await pool.query(query, values);
       if (result.rowCount === 0) {
         return {
@@ -270,39 +325,67 @@ export default defineEventHandler(async (event) => {
   }
 
   if (method === "DELETE") {
-    // Remove a marker
+    // Remove a marker or an image
     const body = await readBody(event);
-    const { id, session_hash } = body;
+    const { id, session_hash, image_id } = body;
 
-    if (!id || !session_hash) {
+    if (!session_hash) {
       return {
         success: false,
-        error: "Marker ID and session hash are required",
+        error: "Session hash is required",
       };
     }
 
     try {
-      const query = `
-        DELETE FROM markers
-        WHERE id = $1 AND session_hash = $2
-        RETURNING id
-      `;
-      const result = await pool.query(query, [id, session_hash]);
-      if (result.rowCount === 0) {
+      if (image_id) {
+        // Delete a specific image
+        const query = `
+          DELETE FROM marker_images
+          WHERE id = $1 AND marker_id IN (
+            SELECT id FROM markers WHERE session_hash = $2
+          )
+          RETURNING id
+        `;
+        const result = await pool.query(query, [image_id, session_hash]);
+        if (result.rowCount === 0) {
+          return {
+            success: false,
+            error: "Image not found or session hash mismatch",
+          };
+        }
+        return {
+          success: true,
+          message: "Image removed successfully",
+        };
+      } else if (id) {
+        // Delete a marker (images will be deleted via ON DELETE CASCADE)
+        const query = `
+          DELETE FROM markers
+          WHERE id = $1 AND session_hash = $2
+          RETURNING id
+        `;
+        const result = await pool.query(query, [id, session_hash]);
+        if (result.rowCount === 0) {
+          return {
+            success: false,
+            error: "Marker not found or session hash mismatch",
+          };
+        }
+        return {
+          success: true,
+          message: "Marker removed successfully",
+        };
+      } else {
         return {
           success: false,
-          error: "Marker not found or session hash mismatch",
+          error: "Marker ID or image ID is required",
         };
       }
-      return {
-        success: true,
-        message: "Marker removed successfully",
-      };
     } catch (error) {
-      console.error("Error removing marker:", error.message, error.stack);
+      console.error("Error removing data:", error.message, error.stack);
       return {
         success: false,
-        error: `Failed to remove marker: ${error.message}`,
+        error: `Failed to remove data: ${error.message}`,
       };
     }
   }
