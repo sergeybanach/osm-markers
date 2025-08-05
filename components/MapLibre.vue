@@ -1,5 +1,4 @@
 <!-- components/MapLibre.vue -->
-<!-- components/MapLibre.vue -->
 <template>
   <div id="map-wrapper">
     <button class="add-marker-btn" :class="{ active: isAddingMarker }" @click="toggleAddMarker">
@@ -23,6 +22,14 @@
       {{ notificationMessage }}
     </div>
 
+    <!-- Modal for image preview -->
+    <div v-if="showImageModal" class="image-modal" @click="closeImageModal">
+      <div class="image-modal-content" @click.stop>
+        <img :src="selectedImageUrl" alt="Preview" class="modal-image" />
+        <button class="close-modal-btn" @click="closeImageModal">Close</button>
+      </div>
+    </div>
+
     <div id="map" :class="{ 'adding-marker': isAddingMarker, 'moving-marker': isMovingMarker }"
       style="width: 100%; height: 100vh"></div>
   </div>
@@ -39,6 +46,10 @@ const movingMarkerId = ref(null);
 let map = null;
 let mapCanvas = null;
 const markers = ref([]);
+
+// State for modal
+const showImageModal = ref(false);
+const selectedImageUrl = ref("");
 
 // Session hash management
 const route = useRoute();
@@ -75,6 +86,20 @@ const copyCoordinates = async (latitude, longitude) => {
 };
 
 window.copyCoordinates = copyCoordinates;
+
+// Function to open image modal
+const openImageModal = (imageUrl) => {
+  selectedImageUrl.value = imageUrl;
+  showImageModal.value = true;
+};
+
+window.openImageModal = openImageModal;
+
+// Function to close image modal
+const closeImageModal = () => {
+  showImageModal.value = false;
+  selectedImageUrl.value = "";
+};
 
 // Function to validate session hash format (base64url)
 const isValidSessionHash = (hash) => {
@@ -161,7 +186,7 @@ const createPopupContent = (marker, markerInstance) => {
       .map(
         (img) => `
         <div style="position: relative; margin-top: 10px;">
-          <img src="${img.image_url}" style="max-width: 100%; height: auto;" alt="Marker image">
+          <img src="${img.image_url}" style="max-width: 100%; height: auto; cursor: pointer;" alt="Marker image" onclick="window.openImageModal('${img.image_url}')">
           <button onclick="window.removeImage(${marker.id}, ${img.id})"
             style="position: absolute; top: 5px; right: 5px; padding: 2px 6px; background-color: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer;">
             Delete
@@ -923,6 +948,7 @@ onUnmounted(() => {
   delete window.uploadImages;
   delete window.removeImage;
   delete window.copyCoordinates;
+  delete window.openImageModal;
 });
 </script>
 
@@ -1009,6 +1035,53 @@ onUnmounted(() => {
   }
 }
 
+/* Modal styles */
+.image-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.8);
+  z-index: 1000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.image-modal-content {
+  position: relative;
+  background-color: white;
+  padding: 20px;
+  border-radius: 8px;
+  max-width: 90%;
+  max-height: 90%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.modal-image {
+  max-width: 100%;
+  max-height: 70vh;
+  object-fit: contain;
+}
+
+.close-modal-btn {
+  margin-top: 10px;
+  padding: 8px 16px;
+  background-color: #dc3545;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.close-modal-btn:hover {
+  background-color: #c82333;
+}
+
 @media (max-width: 768px) {
   .add-marker-btn {
     font-size: 14px;
@@ -1034,6 +1107,15 @@ onUnmounted(() => {
 
   input[type="file"] {
     font-size: 12px;
+  }
+
+  .image-modal-content {
+    padding: 10px;
+  }
+
+  .close-modal-btn {
+    font-size: 14px;
+    padding: 6px 12px;
   }
 }
 </style>
