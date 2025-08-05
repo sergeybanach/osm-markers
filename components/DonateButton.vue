@@ -26,7 +26,7 @@ import { ref } from 'vue';
 
 // State for modal
 const showDonateModal = ref(false);
-const btcAddress = '1BJv6Urrrz4PHAoSVCyoPdHjVEVtADuhrs';
+const btcAddress = 'bc1q4zmexg85pye0fpl35qwwa0p6uyt9nrknaptm5e';
 
 // Function to open the modal
 const openDonateModal = () => {
