@@ -155,10 +155,11 @@ const osmStyle = {
 };
 
 // Create popup content with editable coordinates, description, multiple image uploads, and buttons
-// In components/MapLibre.vue
 const createPopupContent = (marker, markerInstance) => {
   const imagesHtml = marker.images.length > 0
-    ? marker.images.map(img => `
+    ? marker.images
+      .map(
+        (img) => `
         <div style="position: relative; margin-top: 10px;">
           <img src="${img.image_url}" style="max-width: 100%; height: auto;" alt="Marker image">
           <button onclick="window.removeImage(${marker.id}, ${img.id})"
@@ -166,20 +167,24 @@ const createPopupContent = (marker, markerInstance) => {
             Delete
           </button>
         </div>
-      `).join("")
+      `
+      )
+      .join("")
     : "<p style='font-family: Arial, sans-serif; font-size: 14px;'>No images available</p>";
 
   return `
     <div style="max-width: 200px; padding: 10px; font-family: Arial, sans-serif; font-size: 14px; line-height: 1.5;">
       <p style="font-weight: 600; margin-bottom: 5px;">Description:</p>
-      <div id="description-display-${marker.id}" style="display: flex; align-items: center; margin-bottom: 10px;">
-        <span style="flex: 1; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${marker.description || "No description"}</span>
+      <div id="description-display-${marker.id}" style="display: flex; align-items: flex-start; margin-bottom: 10px;">
+        <span style="flex: 1; font-size: 14px; white-space: normal; word-wrap: break-word;">${marker.description || "No description"
+    }</span>
         <button onclick="window.toggleEditDescription(${marker.id})" style="margin-left: 5px; padding: 2px 6px; background-color: #ffc107; color: black; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">
           Edit
         </button>
       </div>
       <div id="description-edit-${marker.id}" style="display: none; margin-bottom: 10px;">
-        <textarea id="description-textarea-${marker.id}" style="width: 100%; min-height: 50px; margin-bottom: 5px; font-family: Arial, sans-serif; font-size: 14px;">${marker.description || ""}</textarea>
+        <textarea id="description-textarea-${marker.id}" style="width: 100%; min-height: 50px; margin-bottom: 5px; font-family: Arial, sans-serif; font-size: 14px;">${marker.description || ""
+    }</textarea>
         <div style="display: flex; justify-content: flex-end;">
           <button onclick="window.saveDescription(${marker.id})" style="padding: 2px 6px; background-color: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">
             Save
@@ -191,7 +196,9 @@ const createPopupContent = (marker, markerInstance) => {
       </div>
       <p style="font-weight: 600; margin-bottom: 5px;">Coordinates:</p>
       <div id="coords-display-${marker.id}" style="display: flex; align-items: center; margin-bottom: 10px;">
-        <span style="flex: 1; cursor: pointer; text-decoration: underline; font-size: 14px;" onclick="window.copyCoordinates(${marker.latitude}, ${marker.longitude})">${marker.latitude.toFixed(6)}, ${marker.longitude.toFixed(6)}</span>
+        <span style="flex: 1; cursor: pointer; text-decoration: underline; font-size: 14px;" onclick="window.copyCoordinates(${marker.latitude}, ${marker.longitude})">${marker.latitude.toFixed(
+      6
+    )}, ${marker.longitude.toFixed(6)}</span>
         <button onclick="window.toggleEditCoordinates(${marker.id})" style="margin-left: 5px; padding: 2px 6px; background-color: #ffc107; color: black; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">
           Edit
         </button>
@@ -199,11 +206,15 @@ const createPopupContent = (marker, markerInstance) => {
       <div id="coords-edit-${marker.id}" style="display: none; margin-bottom: 10px;">
         <div>
           <label style="font-size: 14px;">Latitude: </label>
-          <input type="number" id="lat-${marker.id}" value="${marker.latitude.toFixed(6)}" step="any" style="width: 100px; margin-bottom: 5px; font-family: Arial, sans-serif; font-size: 14px;" />
+          <input type="number" id="lat-${marker.id}" value="${marker.latitude.toFixed(
+      6
+    )}" step="any" style="width: 100px; margin-bottom: 5px; font-family: Arial, sans-serif; font-size: 14px;" />
         </div>
         <div>
           <label style="font-size: 14px;">Longitude: </label>
-          <input type="number" id="lng-${marker.id}" value="${marker.longitude.toFixed(6)}" step="any" style="width: 100px; margin-bottom: 10px; font-family: Arial, sans-serif; font-size: 14px;" />
+          <input type="number" id="lng-${marker.id}" value="${marker.longitude.toFixed(
+      6
+    )}" step="any" style="width: 100px; margin-bottom: 10px; font-family: Arial, sans-serif; font-size: 14px;" />
         </div>
         <div style="display: flex; justify-content: flex-end;">
           <button onclick="window.updateMarkerCoordinates(${marker.id})" style="margin-right: 5px; padding: 5px 10px; background-color: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">
@@ -224,7 +235,10 @@ const createPopupContent = (marker, markerInstance) => {
       ${imagesHtml}
       <div style="margin-top: 10px; display: flex; justify-content: space-between;">
         <button onclick="window.moveMarker(${marker.id})" style="padding: 5px 10px; background-color: #17a2b8; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">
-          ${isMovingMarker.value && movingMarkerId.value === marker.id ? "Moving" : "Move Marker"}
+          ${isMovingMarker.value && movingMarkerId.value === marker.id
+      ? "Moving"
+      : "Move Marker"
+    }
         </button>
         <button onclick="window.removeMarker(${marker.id})" style="padding: 5px 10px; background-color: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">
           Remove
