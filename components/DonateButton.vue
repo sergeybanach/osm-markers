@@ -53,10 +53,10 @@ const copyBtcAddress = async () => {
 <style scoped>
 .donate-btn {
     position: absolute;
-    top: 10px;
+    /* top: 10px; */
     /* left: 150px; */
     z-index: 50;
-    padding: 10px 20px;
+    /* padding: 10px 20px; */
     background: linear-gradient(45deg, #ff6f61, #ffb347, #4facfe, #00f2fe);
     background-size: 400% 400%;
     color: white;
@@ -72,6 +72,7 @@ const copyBtcAddress = async () => {
 
     font-size: 14px;
     padding: 8px 16px;
+    
     top: 10px;
     left: auto;
     right: 56px;

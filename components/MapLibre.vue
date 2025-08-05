@@ -959,53 +959,84 @@ onUnmounted(() => {
   top: 10px;
   left: 10px;
   z-index: 50;
-  padding: 8px 16px;
-  background-color: #007bff;
+
+  background: linear-gradient(45deg, #3283a3, #1e70da, #4facfe, #00f2fe);
+  background-size: 400% 400%;
   color: white;
   border: none;
-  border-radius: 4px;
+  border-radius: 8px;
   cursor: pointer;
-  font-size: 16px;
+  text-transform: uppercase;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  animation: gradient 6s ease infinite, pulse 2s ease infinite;
+
+  font-weight: 600;
+  font-size: 14px;
+  padding: 6px 12px;
+
 }
 
 .add-marker-btn:hover {
-  background-color: #0056b3;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
 }
 
 .add-marker-btn.active {
-  background-color: #28a745;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
 }
 
 .add-marker-btn.active:hover {
-  background-color: #218838;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
 }
 
 .copy-session-hash-btn {
-  background-color: #17a2b8;
+
+
+  background: linear-gradient(45deg, #4c9e16, #4c9e16, #4facfe, #00f2fe);
+  background-size: 400% 400%;
   color: white;
   border: none;
-  border-radius: 4px;
+  border-radius: 8px;
+  cursor: pointer;
+  text-transform: uppercase;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  animation: gradient 6s ease infinite, pulse 2s ease infinite;
+
+  font-weight: 600;
+  font-size: 14px;
+  padding: 6px 12px;
+
   border-top-right-radius: 0;
   border-bottom-right-radius: 0;
-  cursor: pointer;
-  margin-right: 0px;
-
-  padding: 8px 16px;
-  font-size: 16px;
 }
 
 .generate-new-hash-btn {
-  background-color: #6c757d;
+  background: linear-gradient(45deg, #6f757e, #6f757e, #4facfe, #00f2fe);
+  background-size: 400% 400%;
   color: white;
   border: none;
-  border-radius: 4px;
+  border-radius: 8px;
   cursor: pointer;
+  text-transform: uppercase;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  animation: gradient 6s ease infinite, pulse 2s ease infinite;
+
+  font-weight: 600;
+  font-size: 14px;
+  padding: 6px 12px;
 
   border-top-left-radius: 0;
   border-bottom-left-radius: 0;
 
-  padding: 8px 16px;
-  font-size: 16px;
+
 }
 
 #map-wrapper {
@@ -1110,20 +1141,11 @@ onUnmounted(() => {
 }
 
 @media (max-width: 768px) {
-  .add-marker-btn {
-    font-size: 14px;
-    padding: 6px 12px;
-  }
+  .add-marker-btn {}
 
-  .copy-session-hash-btn {
-    font-size: 14px;
-    padding: 6px 12px;
-  }
+  .copy-session-hash-btn {}
 
-  .generate-new-hash-btn {
-    font-size: 14px;
-    padding: 6px 12px;
-  }
+  .generate-new-hash-btn {}
 
   .notification {
     font-size: 12px;
