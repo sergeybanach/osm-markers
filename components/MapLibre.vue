@@ -1,17 +1,27 @@
 <!-- components/MapLibre.vue -->
+<!-- components/MapLibre.vue -->
 <template>
   <div id="map-wrapper">
-    <button class="add-marker-btn" :class="{ active: isAddingMarker }" @click="toggleAddMarker">
+    <button
+      class="add-marker-btn"
+      :class="{ active: isAddingMarker }"
+      @click="toggleAddMarker"
+    >
       {{ isAddingMarker ? "Click map to place marker" : "Add Marker" }}
     </button>
+    <DonateButton />
 
     <div style="position: absolute; bottom: 80px; left: 10px; z-index: 50;">
-      <button @click="copySessionHash"
-        style="padding: 4px 8px; background-color: #17a2b8; color: white; border: none; border-radius: 4px; cursor: pointer; margin-left: 5px;">
+      <button
+        @click="copySessionHash"
+        style="padding: 4px 8px; background-color: #17a2b8; color: white; border: none; border-radius: 4px; cursor: pointer; margin-left: 5px;"
+      >
         Copy Url
       </button>
-      <button @click="generateNewHash"
-        style="padding: 4px 8px; background-color: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer; margin-left: 5px;">
+      <button
+        @click="generateNewHash"
+        style="padding: 4px 8px; background-color: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer; margin-left: 5px;"
+      >
         New Hash
       </button>
     </div>
@@ -21,8 +31,11 @@
       {{ notificationMessage }}
     </div>
 
-    <div id="map" :class="{ 'adding-marker': isAddingMarker, 'moving-marker': isMovingMarker }"
-      style="width: 100%; height: 100vh"></div>
+    <div
+      id="map"
+      :class="{ 'adding-marker': isAddingMarker, 'moving-marker': isMovingMarker }"
+      style="width: 100%; height: 100vh"
+    ></div>
   </div>
 </template>
 
