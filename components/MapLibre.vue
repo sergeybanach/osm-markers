@@ -985,8 +985,10 @@ onUnmounted(() => {
   color: white;
   border: none;
   border-radius: 4px;
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
   cursor: pointer;
-  margin-right: 5px;
+  margin-right: 0px;
 
   padding: 8px 16px;
   font-size: 16px;
@@ -998,6 +1000,9 @@ onUnmounted(() => {
   border: none;
   border-radius: 4px;
   cursor: pointer;
+
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
 
   padding: 8px 16px;
   font-size: 16px;
