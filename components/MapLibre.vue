@@ -2,26 +2,18 @@
 <!-- components/MapLibre.vue -->
 <template>
   <div id="map-wrapper">
-    <button
-      class="add-marker-btn"
-      :class="{ active: isAddingMarker }"
-      @click="toggleAddMarker"
-    >
+    <button class="add-marker-btn" :class="{ active: isAddingMarker }" @click="toggleAddMarker">
       {{ isAddingMarker ? "Click map to place marker" : "Add Marker" }}
     </button>
     <DonateButton />
 
     <div style="position: absolute; bottom: 80px; left: 10px; z-index: 50;">
-      <button
-        @click="copySessionHash"
-        style="padding: 4px 8px; background-color: #17a2b8; color: white; border: none; border-radius: 4px; cursor: pointer; margin-left: 5px;"
-      >
+      <button @click="copySessionHash"
+        style="padding: 4px 8px; background-color: #17a2b8; color: white; border: none; border-radius: 4px; cursor: pointer; margin-left: 5px;">
         Copy Url
       </button>
-      <button
-        @click="generateNewHash"
-        style="padding: 4px 8px; background-color: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer; margin-left: 5px;"
-      >
+      <button @click="generateNewHash"
+        style="padding: 4px 8px; background-color: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer; margin-left: 5px;">
         New Hash
       </button>
     </div>
@@ -31,11 +23,8 @@
       {{ notificationMessage }}
     </div>
 
-    <div
-      id="map"
-      :class="{ 'adding-marker': isAddingMarker, 'moving-marker': isMovingMarker }"
-      style="width: 100%; height: 100vh"
-    ></div>
+    <div id="map" :class="{ 'adding-marker': isAddingMarker, 'moving-marker': isMovingMarker }"
+      style="width: 100%; height: 100vh"></div>
   </div>
 </template>
 
@@ -507,10 +496,10 @@ const moveMarker = (markerId) => {
         "",
       images: markerInstance.marker.getPopup()._content.querySelectorAll("img").length > 0
         ? Array.from(markerInstance.marker.getPopup()._content.querySelectorAll("img")).map((img, index) => ({
-            id: index + 1,
-            image_url: img.src,
-            created_at: new Date().toISOString(),
-          }))
+          id: index + 1,
+          image_url: img.src,
+          created_at: new Date().toISOString(),
+        }))
         : [],
       session_hash: sessionHash.value,
     };
@@ -530,10 +519,10 @@ const moveMarker = (markerId) => {
         "",
       images: markerInstance.marker.getPopup()._content.querySelectorAll("img").length > 0
         ? Array.from(markerInstance.marker.getPopup()._content.querySelectorAll("img")).map((img, index) => ({
-            id: index + 1,
-            image_url: img.src,
-            created_at: new Date().toISOString(),
-          }))
+          id: index + 1,
+          image_url: img.src,
+          created_at: new Date().toISOString(),
+        }))
         : [],
       session_hash: sessionHash.value,
     };
@@ -577,6 +566,7 @@ const handleMoveMarker = async (e) => {
         images: response.marker.images,
         session_hash: sessionHash.value,
       };
+      // Update the popup content to reflect the new state
       markerInstance.marker.getPopup().setHTML(createPopupContent(markerData, markerInstance));
     } else {
       alert("Failed to update marker position: " + response.error);
@@ -588,9 +578,30 @@ const handleMoveMarker = async (e) => {
     markerInstance.marker.setLngLat([markerInstance.marker.getLngLat().lng, markerInstance.marker.getLngLat().lat]);
   }
 
+  // Reset moving state
   isMovingMarker.value = false;
   movingMarkerId.value = null;
   changeToProperCursor();
+
+  // Ensure the popup is updated to reflect the button text change
+  const markerData = {
+    id: markerInstance.id,
+    latitude: markerInstance.marker.getLngLat().lat,
+    longitude: markerInstance.marker.getLngLat().lng,
+    description:
+      document.getElementById(`description-textarea-${markerInstance.id}`)?.value ||
+      markerInstance.marker.getPopup()._content.querySelector("span")?.textContent.trim() ||
+      "",
+    images: markerInstance.marker.getPopup()._content.querySelectorAll("img").length > 0
+      ? Array.from(markerInstance.marker.getPopup()._content.querySelectorAll("img")).map((img, index) => ({
+        id: index + 1,
+        image_url: img.src,
+        created_at: new Date().toISOString(),
+      }))
+      : [],
+    session_hash: sessionHash.value,
+  };
+  markerInstance.marker.getPopup().setHTML(createPopupContent(markerData, markerInstance));
 };
 
 // Function to remove marker
