@@ -155,6 +155,7 @@ const osmStyle = {
 };
 
 // Create popup content with editable coordinates, description, multiple image uploads, and buttons
+// In components/MapLibre.vue
 const createPopupContent = (marker, markerInstance) => {
   const imagesHtml = marker.images.length > 0
     ? marker.images.map(img => `
@@ -166,64 +167,64 @@ const createPopupContent = (marker, markerInstance) => {
           </button>
         </div>
       `).join("")
-    : "<p>No images available</p>";
+    : "<p style='font-family: Arial, sans-serif; font-size: 14px;'>No images available</p>";
 
   return `
-    <div style="max-width: 200px; stall: 10px;">
+    <div style="max-width: 200px; padding: 10px; font-family: Arial, sans-serif; font-size: 14px; line-height: 1.5;">
       <div style="display: flex; align-items: center; margin-bottom: 10px;">
-        <strong style="margin-right: 5px;">Description:</strong>
+        <strong style="margin-right: 5px; font-weight: 600;">Description:</strong>
         <div id="description-display-${marker.id}">
-          <span>${marker.description || "No description"}</span>
-          <button onclick="window.toggleEditDescription(${marker.id})" style="margin-left: 5px; padding: 2px 6px; background-color: #ffc107; color: black; border: none; border-radius: 4px; cursor: pointer;">
+          <span style="font-size: 14px;">${marker.description || "No description"}</span>
+          <button onclick="window.toggleEditDescription(${marker.id})" style="margin-left: 5px; padding: 2px 6px; background-color: #ffc107; color: black; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">
             Edit
           </button>
         </div>
         <div id="description-edit-${marker.id}" style="display: none;">
-          <textarea id="description-textarea-${marker.id}" style="width: 100%; min-height: 50px; margin-bottom: 5px;">${marker.description || ""}</textarea>
-          <button onclick="window.saveDescription(${marker.id})" style="padding: 2px 6px; background-color: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer;">
+          <textarea id="description-textarea-${marker.id}" style="width: 100%; min-height: 50px; margin-bottom: 5px; font-family: Arial, sans-serif; font-size: 14px;">${marker.description || ""}</textarea>
+          <button onclick="window.saveDescription(${marker.id})" style="padding: 2px 6px; background-color: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">
             Save
           </button>
-          <button onclick="window.toggleEditDescription(${marker.id})" style="padding: 2px 6px; background-color: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer; margin-left: 5px;">
+          <button onclick="window.toggleEditDescription(${marker.id})" style="padding: 2px 6px; background-color: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer; margin-left: 5px; font-size: 12px;">
             Cancel
           </button>
         </div>
       </div>
-      <p><strong>Coordinates:</strong></p>
+      <p style="font-weight: 600; margin-bottom: 5px;">Coordinates:</p>
       <div id="coords-display-${marker.id}">
-        <p><span style="cursor: pointer; text-decoration: underline;" onclick="window.copyCoordinates(${marker.latitude}, ${marker.longitude})">${marker.latitude.toFixed(6)}, ${marker.longitude.toFixed(6)}</span>
-           <button onclick="window.toggleEditCoordinates(${marker.id})" style="margin-left: 5px; padding: 2px 6px; background-color: #ffc107; color: black; border: none; border-radius: 4px; cursor: pointer;">
+        <p><span style="cursor: pointer; text-decoration: underline; font-size: 14px;" onclick="window.copyCoordinates(${marker.latitude}, ${marker.longitude})">${marker.latitude.toFixed(6)}, ${marker.longitude.toFixed(6)}</span>
+           <button onclick="window.toggleEditCoordinates(${marker.id})" style="margin-left: 5px; padding: 2px 6px; background-color: #ffc107; color: black; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">
              Edit
            </button>
         </p>
       </div>
       <div id="coords-edit-${marker.id}" style="display: none;">
         <div>
-          <label>Latitude: </label>
-          <input type="number" id="lat-${marker.id}" value="${marker.latitude.toFixed(6)}" step="any" style="width: 100px; margin-bottom: 5px;" />
+          <label style="font-size: 14px;">Latitude: </label>
+          <input type="number" id="lat-${marker.id}" value="${marker.latitude.toFixed(6)}" step="any" style="width: 100px; margin-bottom: 5px; font-family: Arial, sans-serif; font-size: 14px;" />
         </div>
         <div>
-          <label>Longitude: </label>
-          <input type="number" id="lng-${marker.id}" value="${marker.longitude.toFixed(6)}" step="any" style="width: 100px; margin-bottom: 10px;" />
+          <label style="font-size: 14px;">Longitude: </label>
+          <input type="number" id="lng-${marker.id}" value="${marker.longitude.toFixed(6)}" step="any" style="width: 100px; margin-bottom: 10px; font-family: Arial, sans-serif; font-size: 14px;" />
         </div>
-        <button onclick="window.updateMarkerCoordinates(${marker.id})" style="margin-top: 10px; margin-right: 5px; padding: 5px 10px; background-color: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer;">
+        <button onclick="window.updateMarkerCoordinates(${marker.id})" style="margin-top: 10px; margin-right: 5px; padding: 5px 10px; background-color: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">
           Update Coordinates
         </button>
-        <button onclick="window.toggleEditCoordinates(${marker.id})" style="margin-top: 10px; margin-right: 5px; padding: 5px 10px; background-color: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer;">
+        <button onclick="window.toggleEditCoordinates(${marker.id})" style="margin-top: 10px; margin-right: 5px; padding: 5px 10px; background-color: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">
           Cancel
         </button>
       </div>
       <div style="margin-top: 10px;">
-        <label for="image-upload-${marker.id}" style="display: block; margin-bottom: 5px;">Upload Images:</label>
-        <input type="file" id="image-upload-${marker.id}" accept="image/*" multiple style="margin-bottom: 10px;" />
-        <button onclick="window.uploadImages(${marker.id})" style="padding: 5px 10px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">
+        <label for="image-upload-${marker.id}" style="display: block; margin-bottom: 5px; font-size: 14px;">Upload Images:</label>
+        <input type="file" id="image-upload-${marker.id}" accept="image/*" multiple style="margin-bottom: 10px; font-family: Arial, sans-serif; font-size: 14px;" />
+        <button onclick="window.uploadImages(${marker.id})" style="padding: 5px 10px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">
           Upload
         </button>
       </div>
       ${imagesHtml}
-      <button onclick="window.moveMarker(${marker.id})" style="margin-top: 10px; margin-right: 5px; padding: 5px 10px; background-color: #17a2b8; color: white; border: none; border-radius: 4px; cursor: pointer;">
+      <button onclick="window.moveMarker(${marker.id})" style="margin-top: 10px; margin-right: 5px; padding: 5px 10px; background-color: #17a2b8; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">
         ${isMovingMarker.value && movingMarkerId.value === marker.id ? "Moving" : "Move Marker"}
       </button>
-      <button onclick="window.removeMarker(${marker.id})" style="margin-top: 10px; padding: 5px 10px; background-color: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer;">
+      <button onclick="window.removeMarker(${marker.id})" style="margin-top: 10px; padding: 5px 10px; background-color: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">
         Remove
       </button>
     </div>
