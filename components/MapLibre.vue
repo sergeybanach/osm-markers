@@ -8,12 +8,10 @@
 
     <!-- Move Copy URL and New Hash buttons below Add Marker -->
     <div style="position: absolute; top: 50px; left: 10px; z-index: 50;">
-      <button @click="copySessionHash"
-        style="padding: 4px 8px; background-color: #17a2b8; color: white; border: none; border-radius: 4px; cursor: pointer; margin-right: 5px;">
+      <button @click="copySessionHash" class="copy-session-hash-btn" style="">
         Copy URL
       </button>
-      <button @click="generateNewHash"
-        style="padding: 4px 8px; background-color: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer;">
+      <button @click="generateNewHash" class="generate-new-hash-btn" style="">
         New Hash
       </button>
     </div>
@@ -982,6 +980,29 @@ onUnmounted(() => {
   background-color: #218838;
 }
 
+.copy-session-hash-btn {
+  background-color: #17a2b8;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-right: 5px;
+
+  padding: 8px 16px;
+  font-size: 16px;
+}
+
+.generate-new-hash-btn {
+  background-color: #6c757d;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+
+  padding: 8px 16px;
+  font-size: 16px;
+}
+
 #map-wrapper {
   position: relative;
   height: 100vh;
@@ -1085,6 +1106,16 @@ onUnmounted(() => {
 
 @media (max-width: 768px) {
   .add-marker-btn {
+    font-size: 14px;
+    padding: 6px 12px;
+  }
+
+  .copy-session-hash-btn {
+    font-size: 14px;
+    padding: 6px 12px;
+  }
+
+  .generate-new-hash-btn {
     font-size: 14px;
     padding: 6px 12px;
   }
