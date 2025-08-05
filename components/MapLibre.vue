@@ -6,13 +6,14 @@
     </button>
     <DonateButton />
 
-    <div style="position: absolute; bottom: 80px; left: 10px; z-index: 50;">
+    <!-- Move Copy URL and New Hash buttons below Add Marker -->
+    <div style="position: absolute; top: 50px; left: 10px; z-index: 50;">
       <button @click="copySessionHash"
-        style="padding: 4px 8px; background-color: #17a2b8; color: white; border: none; border-radius: 4px; cursor: pointer; margin-left: 5px;">
-        Copy Url
+        style="padding: 4px 8px; background-color: #17a2b8; color: white; border: none; border-radius: 4px; cursor: pointer; margin-right: 5px;">
+        Copy URL
       </button>
       <button @click="generateNewHash"
-        style="padding: 4px 8px; background-color: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer; margin-left: 5px;">
+        style="padding: 4px 8px; background-color: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer;">
         New Hash
       </button>
     </div>
