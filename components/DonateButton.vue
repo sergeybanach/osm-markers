@@ -37,7 +37,9 @@
     .donate-btn {
         font-size: 14px;
         padding: 6px 12px;
-        left: 120px;
+        top: 10px;
+        left: auto;
+        right: 56px;
         /* Adjusted for smaller screens */
     }
 }
