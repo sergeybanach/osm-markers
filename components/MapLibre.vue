@@ -2,17 +2,17 @@
 <template>
   <div id="map-wrapper">
     <button class="add-marker-btn" :class="{ active: isAddingMarker }" @click="toggleAddMarker">
-      {{ isAddingMarker ? "Click map to place marker" : "Add Marker" }}
+      {{ isAddingMarker ? "Кликните на карту для размещения маркера" : "Добавить маркер" }}
     </button>
     <DonateButton />
 
     <!-- Move Copy URL and New Hash buttons below Add Marker -->
     <div style="position: absolute; top: 50px; left: 10px; z-index: 50;">
       <button @click="copySessionHash" class="copy-session-hash-btn" style="">
-        Copy URL
+        Копировать URL
       </button>
       <button @click="generateNewHash" class="generate-new-hash-btn" style="">
-        New Hash
+        Новый хэш
       </button>
     </div>
 
@@ -24,8 +24,8 @@
     <!-- Modal for image preview -->
     <div v-if="showImageModal" class="image-modal" @click="closeImageModal">
       <div class="image-modal-content" @click.stop>
-        <img :src="selectedImageUrl" alt="Preview" class="modal-image" />
-        <button class="close-modal-btn" @click="closeImageModal">Close</button>
+        <img :src="selectedImageUrl" alt="Предпросмотр" class="modal-image" />
+        <button class="close-modal-btn" @click="closeImageModal">Закрыть</button>
       </div>
     </div>
 
@@ -77,10 +77,10 @@ const copyCoordinates = async (latitude, longitude) => {
   try {
     const coordsText = `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
     await navigator.clipboard.writeText(coordsText);
-    triggerNotification("Coordinates copied to clipboard!");
+    triggerNotification("Координаты скопированы в буфер обмена!");
   } catch (error) {
     console.error("Error copying coordinates:", error);
-    alert("Failed to copy coordinates: " + error.message);
+    alert("Не удалось скопировать координаты: " + error.message);
   }
 };
 
@@ -127,12 +127,12 @@ const ensureSessionHashAndMapPosition = async () => {
         updateUrlWithSessionHash(hash);
       } else {
         console.error("Failed to generate session hash:", data.error);
-        alert("Failed to generate session hash: " + data.error);
+        alert("Не удалось сгенерировать хэш сессии: " + data.error);
         return null;
       }
     } catch (error) {
       console.error("Error generating session hash:", error);
-      alert("Error generating session hash: " + error.message);
+      alert("Ошибка при генерации хэша сессии: " + error.message);
       return null;
     }
   } else {
@@ -185,25 +185,25 @@ const createPopupContent = (marker, markerInstance) => {
       .map(
         (img) => `
         <div style="position: relative; margin-top: 10px;">
-          <img src="${img.image_url}" style="max-width: 100%; height: auto; cursor: pointer;" alt="Marker image" onclick="window.openImageModal('${img.image_url}')">
+          <img src="${img.image_url}" style="max-width: 100%; height: auto; cursor: pointer;" alt="Изображение маркера" onclick="window.openImageModal('${img.image_url}')">
           <button onclick="window.removeImage(${marker.id}, ${img.id})"
             style="position: absolute; top: 5px; right: 5px; padding: 2px 6px; background-color: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer;">
-            Delete
+            Удалить
           </button>
         </div>
       `
       )
       .join("")
-    : "<p style='font-family: Arial, sans-serif; font-size: 14px;'>No images available</p>";
+    : "<p style='font-family: Arial, sans-serif; font-size: 14px;'>Изображения отсутствуют</p>";
 
   return `
     <div style="max-width: 200px; padding: 10px; font-family: Arial, sans-serif; font-size: 14px; line-height: 1.5;">
-      <p style="font-weight: 600; margin-bottom: 5px;">Description:</p>
+      <p style="font-weight: 600; margin-bottom: 5px;">Описание:</p>
       <div id="description-display-${marker.id}" style="display: flex; align-items: flex-start; margin-bottom: 10px;">
-        <span style="flex: 1; font-size: 14px; white-space: normal; word-wrap: break-word;">${marker.description || "No description"
+        <span style="flex: 1; font-size: 14px; white-space: normal; word-wrap: break-word;">${marker.description || "Описание отсутствует"
     }</span>
         <button onclick="window.toggleEditDescription(${marker.id})" style="margin-left: 5px; padding: 2px 6px; background-color: #ffc107; color: black; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">
-          Edit
+          Редактировать
         </button>
       </div>
       <div id="description-edit-${marker.id}" style="display: none; margin-bottom: 10px;">
@@ -211,61 +211,61 @@ const createPopupContent = (marker, markerInstance) => {
     }</textarea>
         <div style="display: flex; justify-content: flex-end;">
           <button onclick="window.saveDescription(${marker.id})" style="padding: 2px 6px; background-color: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">
-            Save
+            Сохранить
           </button>
           <button onclick="window.toggleEditDescription(${marker.id})" style="padding: 2px 6px; background-color: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer; margin-left: 5px; font-size: 12px;">
-            Cancel
+            Отмена
           </button>
         </div>
       </div>
-      <p style="font-weight: 600; margin-bottom: 5px;">Coordinates:</p>
+      <p style="font-weight: 600; margin-bottom: 5px;">Координаты:</p>
       <div id="coords-display-${marker.id}" style="display: flex; align-items: center; margin-bottom: 10px;">
         <span style="flex: 1; cursor: pointer; text-decoration: underline; font-size: 14px;" onclick="window.copyCoordinates(${marker.latitude}, ${marker.longitude})">${marker.latitude.toFixed(
       6
     )}, ${marker.longitude.toFixed(6)}</span>
         <button onclick="window.toggleEditCoordinates(${marker.id})" style="margin-left: 5px; padding: 2px 6px; background-color: #ffc107; color: black; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">
-          Edit
+          Редактировать
         </button>
       </div>
       <div id="coords-edit-${marker.id}" style="display: none; margin-bottom: 10px;">
         <div>
-          <label style="font-size: 14px;">Latitude: </label>
+          <label style="font-size: 14px;">Широта: </label>
           <input type="number" id="lat-${marker.id}" value="${marker.latitude.toFixed(
       6
     )}" step="any" style="width: 100px; margin-bottom: 5px; font-family: Arial, sans-serif; font-size: 14px;" />
         </div>
         <div>
-          <label style="font-size: 14px;">Longitude: </label>
+          <label style="font-size: 14px;">Долгота: </label>
           <input type="number" id="lng-${marker.id}" value="${marker.longitude.toFixed(
       6
     )}" step="any" style="width: 100px; margin-bottom: 10px; font-family: Arial, sans-serif; font-size: 14px;" />
         </div>
         <div style="display: flex; justify-content: flex-end;">
           <button onclick="window.updateMarkerCoordinates(${marker.id})" style="margin-right: 5px; padding: 5px 10px; background-color: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">
-            Update Coordinates
+            Обновить координаты
           </button>
           <button onclick="window.toggleEditCoordinates(${marker.id})" style="padding: 5px 10px; background-color: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">
-            Cancel
+            Отмена
           </button>
         </div>
       </div>
       <div style="margin-top: 10px;">
-        <label for="image-upload-${marker.id}" style="display: block; margin-bottom: 5px; font-size: 14px;">Upload Images:</label>
+        <label for="image-upload-${marker.id}" style="display: block; margin-bottom: 5px; font-size: 14px;">Загрузить изображения:</label>
         <input type="file" id="image-upload-${marker.id}" accept="image/*" multiple style="margin-bottom: 10px; font-family: Arial, sans-serif; font-size: 14px;" />
         <button onclick="window.uploadImages(${marker.id})" style="padding: 5px 10px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">
-          Upload
+          Загрузить
         </button>
       </div>
       ${imagesHtml}
       <div style="margin-top: 10px; display: flex; justify-content: space-between;">
         <button onclick="window.moveMarker(${marker.id})" style="padding: 5px 10px; background-color: #17a2b8; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">
           ${isMovingMarker.value && movingMarkerId.value === marker.id
-      ? "Moving"
-      : "Move Marker"
+      ? "Перемещение"
+      : "Переместить маркер"
     }
         </button>
         <button onclick="window.removeMarker(${marker.id})" style="padding: 5px 10px; background-color: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">
-          Remove
+          Удалить
         </button>
       </div>
     </div>
@@ -327,11 +327,11 @@ const saveDescription = async (markerId) => {
       };
       markerInstance.marker.getPopup().setHTML(createPopupContent(markerData, markerInstance));
     } else {
-      alert("Failed to update description: " + response.error);
+      alert("Не удалось обновить описание: " + response.error);
     }
   } catch (error) {
     console.error("Error updating description:", error);
-    alert("Error updating description: " + error.message);
+    alert("Ошибка при обновлении описания: " + error.message);
   }
 };
 
@@ -348,12 +348,12 @@ const updateMarkerCoordinates = async (markerId) => {
   const newLng = parseFloat(lngInput.value);
 
   if (isNaN(newLat) || isNaN(newLng)) {
-    alert("Please enter valid latitude and longitude values.");
+    alert("Пожалуйста, введите корректные значения широты и долготы.");
     return;
   }
 
   if (newLat < -90 || newLat > 90 || newLng < -180 || newLng > 180) {
-    alert("Latitude must be between -90 and 90, and longitude must be between -180 and 180.");
+    alert("Широта должна быть от -90 до 90, долгота — от -180 до 180.");
     return;
   }
 
@@ -384,11 +384,11 @@ const updateMarkerCoordinates = async (markerId) => {
       };
       markerInstance.marker.getPopup().setHTML(createPopupContent(markerData, markerInstance));
     } else {
-      alert("Failed to update marker coordinates: " + response.error);
+      alert("Не удалось обновить координаты маркера: " + response.error);
     }
   } catch (error) {
     console.error("Error updating marker coordinates:", error);
-    alert("Error updating marker coordinates: " + error.message);
+    alert("Ошибка при обновлении координат маркера: " + error.message);
   }
 };
 
@@ -401,13 +401,13 @@ const uploadImages = async (markerId) => {
 
   const input = document.getElementById(`image-upload-${markerId}`);
   if (!input.files || input.files.length === 0) {
-    alert("Please select at least one image to upload.");
+    alert("Пожалуйста, выберите хотя бы одно изображение для загрузки.");
     return;
   }
 
   const uploadButton = document.querySelector(`#image-upload-${markerId} + button`);
   uploadButton.disabled = true;
-  uploadButton.textContent = "Uploading...";
+  uploadButton.textContent = "Загрузка...";
 
   try {
     const newImages = [];
@@ -437,10 +437,10 @@ const uploadImages = async (markerId) => {
         if (updateResponse.success) {
           newImages.push(updateResponse.image);
         } else {
-          alert(`Failed to save image for marker: ${updateResponse.error}`);
+          alert(`Не удалось сохранить изображение для маркера: ${updateResponse.error}`);
         }
       } else {
-        alert(`Failed to upload image to ImgBB: ${data.error.message}`);
+        alert(`Не удалось загрузить изображение на ImgBB: ${data.error.message}`);
       }
     }
 
@@ -461,16 +461,16 @@ const uploadImages = async (markerId) => {
             session_hash: sessionHash.value,
           };
           markerInstance.marker.getPopup().setHTML(createPopupContent(markerData, markerInstance));
-          triggerNotification(`${newImages.length} image${newImages.length > 1 ? "s" : ""} uploaded successfully!`);
+          triggerNotification(`${newImages.length} изображение${newImages.length > 1 ? "й" : ""} успешно загружено!`);
         }
       }
     }
   } catch (error) {
     console.error("Error uploading images:", error);
-    alert("Error uploading images: " + error.message);
+    alert("Ошибка при загрузке изображений: " + error.message);
   } finally {
     uploadButton.disabled = false;
-    uploadButton.textContent = "Upload";
+    uploadButton.textContent = "Загрузить";
     input.value = "";
   }
 };
@@ -505,15 +505,15 @@ const removeImage = async (markerId, imageId) => {
             session_hash: sessionHash.value,
           };
           markerInstance.marker.getPopup().setHTML(createPopupContent(markerData, markerInstance));
-          triggerNotification("Image removed successfully!");
+          triggerNotification("Изображение успешно удалено!");
         }
       }
     } else {
-      alert("Failed to remove image: " + response.error);
+      alert("Не удалось удалить изображение: " + response.error);
     }
   } catch (error) {
     console.error("Error removing image:", error);
-    alert("Error removing image: " + error.message);
+    alert("Ошибка при удалении изображения: " + error.message);
   }
 };
 
@@ -611,12 +611,12 @@ const handleMoveMarker = async (e) => {
       // Update the popup content to reflect the new state
       markerInstance.marker.getPopup().setHTML(createPopupContent(markerData, markerInstance));
     } else {
-      alert("Failed to update marker position: " + response.error);
+      alert("Не удалось обновить позицию маркера: " + response.error);
       markerInstance.marker.setLngLat([response.marker.longitude, response.marker.latitude]);
     }
   } catch (error) {
     console.error("Error updating marker position:", error);
-    alert("Error updating marker position: " + error.message);
+    alert("Ошибка при обновлении позиции маркера: " + error.message);
     markerInstance.marker.setLngLat([markerInstance.marker.getLngLat().lng, markerInstance.marker.getLngLat().lat]);
   }
 
@@ -661,11 +661,11 @@ const removeMarker = async (markerId) => {
       markerInstance.marker.remove();
       markers.value = markers.value.filter((m) => m.id !== markerId);
     } else {
-      alert("Failed to remove marker: " + response.error);
+      alert("Не удалось удалить маркер: " + response.error);
     }
   } catch (error) {
     console.error("Error removing marker:", error);
-    alert("Error removing marker: " + error.message);
+    alert("Ошибка при удалении маркера: " + error.message);
   }
 };
 
@@ -727,12 +727,12 @@ const addMarker = async (e) => {
         }
       });
     } else {
-      alert("Failed to save marker: " + response.error);
+      alert("Не удалось сохранить маркер: " + response.error);
       markerInstance.remove();
     }
   } catch (error) {
     console.error("Error saving marker:", error);
-    alert("Error saving marker: " + error.message);
+    alert("Ошибка при сохранении маркера: " + error.message);
     markerInstance.remove();
   }
 
@@ -812,12 +812,12 @@ const loadMarkers = async () => {
       return response.markers;
     } else {
       console.error("Failed to load markers:", response.error);
-      alert("Failed to load markers: " + response.error);
+      alert("Не удалось загрузить маркеры: " + response.error);
       return [];
     }
   } catch (error) {
     console.error("Error fetching markers:", error, error.stack);
-    alert(`Error fetching markers: ${error.message || "An unexpected error occurred"}`);
+    alert(`Ошибка при загрузке маркеров: ${error.message || "Произошла непредвиденная ошибка"}`);
     return [];
   }
 };
@@ -826,7 +826,7 @@ const loadMarkers = async () => {
 const updateSessionHash = async () => {
   if (tempSessionHash.value && tempSessionHash.value !== sessionHash.value) {
     if (!isValidSessionHash(tempSessionHash.value)) {
-      alert("Please enter a valid session hash.");
+      alert("Пожалуйста, введите корректный хэш сессии.");
       tempSessionHash.value = sessionHash.value;
       return;
     }
@@ -844,7 +844,7 @@ const updateSessionHash = async () => {
 // Generate new session hash
 const generateNewHash = async () => {
   const confirm = window.confirm(
-    "Generating a new session hash will clear all existing markers and map data for the current session. Are you sure you want to proceed?"
+    "Создание нового хэша сессии приведет к удалению всех существующих маркеров и данных карты для текущей сессии. Вы уверены, что хотите продолжить?"
   );
   if (!confirm) return;
 
@@ -867,14 +867,14 @@ const generateNewHash = async () => {
       }
 
       await saveMapPosition();
-      triggerNotification("New session hash generated and markers cleared successfully!");
+      triggerNotification("Новый хэш сессии успешно создан, маркеры очищены!");
     } else {
       console.error("Failed to generate session hash:", data.error);
-      alert("Failed to generate session hash: " + data.error);
+      alert("Не удалось сгенерировать хэш сессии: " + data.error);
     }
   } catch (error) {
     console.error("Error generating session hash:", error);
-    alert("Error generating session hash: " + error.message);
+    alert("Ошибка при генерации хэша сессии: " + error.message);
   }
 };
 
@@ -884,10 +884,10 @@ const copySessionHash = async () => {
     const baseUrl = window.location.origin;
     const fullUrl = `${baseUrl}?session_hash=${encodeURIComponent(sessionHash.value)}`;
     await navigator.clipboard.writeText(fullUrl);
-    triggerNotification("URL with session hash copied to clipboard!");
+    triggerNotification("URL с хэшем сессии скопирован в буфер обмена!");
   } catch (error) {
     console.error("Error copying URL:", error);
-    alert("Failed to copy URL: " + error.message);
+    alert("Не удалось скопировать URL: " + error.message);
   }
 };
 
@@ -898,7 +898,7 @@ const selectAndCopyHash = (event) => {
     input.select();
   } catch (error) {
     console.error("Error selecting session hash:", error);
-    alert("Failed to select session hash: " + error.message);
+    alert("Не удалось выделить хэш сессии: " + error.message);
   }
 };
 
@@ -975,7 +975,6 @@ onUnmounted(() => {
   font-weight: 600;
   font-size: 14px;
   padding: 6px 12px;
-
 }
 
 .add-marker-btn:hover {
@@ -994,8 +993,6 @@ onUnmounted(() => {
 }
 
 .copy-session-hash-btn {
-
-
   background: linear-gradient(45deg, #4c9e16, #4c9e16, #4facfe, #00f2fe);
   background-size: 400% 400%;
   color: white;
@@ -1035,8 +1032,6 @@ onUnmounted(() => {
 
   border-top-left-radius: 0;
   border-bottom-left-radius: 0;
-
-
 }
 
 #map-wrapper {
