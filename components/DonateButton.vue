@@ -54,7 +54,7 @@ const copyBtcAddress = async () => {
 .donate-btn {
     position: absolute;
     top: 10px;
-    left: 150px;
+    /* left: 150px; */
     z-index: 50;
     padding: 10px 20px;
     background: linear-gradient(45deg, #ff6f61, #ffb347, #4facfe, #00f2fe);
@@ -69,6 +69,12 @@ const copyBtcAddress = async () => {
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
     transition: transform 0.2s ease, box-shadow 0.2s ease;
     animation: gradient 6s ease infinite, pulse 2s ease infinite;
+
+    font-size: 14px;
+    padding: 8px 16px;
+    top: 10px;
+    left: auto;
+    right: 56px;
 }
 
 .donate-btn:hover {
@@ -197,13 +203,7 @@ const copyBtcAddress = async () => {
 }
 
 @media (max-width: 768px) {
-    .donate-btn {
-        font-size: 14px;
-        padding: 8px 16px;
-        top: 10px;
-        left: auto;
-        right: 56px;
-    }
+    .donate-btn {}
 
     .donate-modal-content {
         padding: 15px;
