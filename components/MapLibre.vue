@@ -1131,6 +1131,7 @@ onUnmounted(() => {
 
 /* Marker animation */
 .maplibregl-marker.moving {
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='27' height='41' viewBox='0 0 27 41'%3E%3Cpath fill='%23FF0000' stroke='none' d='M13.5 0C6.04 0 0 6.04 0 13.5c0 9.45 13.5 27 13.5 27S27 22.95 27 13.5C27 6.04 20.96 0 13.5 0zm0 19.5c-3.31 0-6-2.69-6-6s2.69-6 6-6 6 2.69 6 6-2.69 6-6 6z'/%3E%3C/svg%3E");
   animation: pulse 2s ease infinite;
 }
 
