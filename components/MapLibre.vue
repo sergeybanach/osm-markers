@@ -1,4 +1,3 @@
-<!-- components/MapLibre.vue -->
 <template>
   <div id="map-wrapper">
     <button class="add-marker-btn" :class="{ active: isAddingMarker }" @click="toggleAddMarker">
@@ -19,6 +18,13 @@
     <!-- Notification for session hash copied or image upload -->
     <div v-if="showNotification" class="notification">
       {{ notificationMessage }}
+    </div>
+
+    <!-- Moving marker panel -->
+    <div v-if="isMovingMarker" class="moving-panel">
+      Перемещение маркера: перетащите маркер в новое положение.
+      <button @click="cancelMove">Отмена</button>
+      <button @click="confirmMove">Подтвердить</button>
     </div>
 
     <!-- Modal for image preview -->
@@ -42,6 +48,7 @@ import maplibregl from "maplibre-gl";
 const isAddingMarker = ref(false);
 const isMovingMarker = ref(false);
 const movingMarkerId = ref(null);
+const originalLngLat = ref(null);
 let map = null;
 let mapCanvas = null;
 const markers = ref([]);
@@ -259,10 +266,7 @@ const createPopupContent = (marker, markerInstance) => {
       ${imagesHtml}
       <div style="margin-top: 10px; display: flex; justify-content: space-between;">
         <button onclick="window.moveMarker(${marker.id})" style="padding: 5px 10px; background-color: #17a2b8; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">
-          ${isMovingMarker.value && movingMarkerId.value === marker.id
-      ? "Перемещение"
-      : "Переместить маркер"
-    }
+          Переместить маркер
         </button>
         <button onclick="window.removeMarker(${marker.id})" style="padding: 5px 10px; background-color: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">
           Удалить
@@ -524,77 +528,53 @@ const moveMarker = (markerId) => {
   const markerInstance = markers.value.find((m) => m.id === markerId);
   if (!markerInstance) return;
 
-  if (isMovingMarker.value && movingMarkerId.value === markerId) {
-    isMovingMarker.value = false;
-    movingMarkerId.value = null;
-    changeToProperCursor();
-    const markerData = {
-      id: markerId,
-      latitude: markerInstance.marker.getLngLat().lat,
-      longitude: markerInstance.marker.getLngLat().lng,
-      description:
-        document.getElementById(`description-textarea-${markerId}`)?.value ||
-        markerInstance.marker.getPopup()._content.querySelector("span")?.textContent.trim() ||
-        "",
-      images: markerInstance.marker.getPopup()._content.querySelectorAll("img").length > 0
-        ? Array.from(markerInstance.marker.getPopup()._content.querySelectorAll("img")).map((img, index) => ({
-          id: index + 1,
-          image_url: img.src,
-          created_at: new Date().toISOString(),
-        }))
-        : [],
-      session_hash: sessionHash.value,
-    };
-    markerInstance.marker.getPopup().setHTML(createPopupContent(markerData, markerInstance));
-  } else {
-    isAddingMarker.value = false;
-    isMovingMarker.value = true;
-    movingMarkerId.value = markerId;
-    changeToProperCursor();
-    const markerData = {
-      id: markerId,
-      latitude: markerInstance.marker.getLngLat().lat,
-      longitude: markerInstance.marker.getLngLat().lng,
-      description:
-        document.getElementById(`description-textarea-${markerId}`)?.value ||
-        markerInstance.marker.getPopup()._content.querySelector("span")?.textContent.trim() ||
-        "",
-      images: markerInstance.marker.getPopup()._content.querySelectorAll("img").length > 0
-        ? Array.from(markerInstance.marker.getPopup()._content.querySelectorAll("img")).map((img, index) => ({
-          id: index + 1,
-          image_url: img.src,
-          created_at: new Date().toISOString(),
-        }))
-        : [],
-      session_hash: sessionHash.value,
-    };
-    markerInstance.marker.getPopup().setHTML(createPopupContent(markerData, markerInstance));
+  isAddingMarker.value = false;
+  isMovingMarker.value = true;
+  movingMarkerId.value = markerId;
+  originalLngLat.value = { ...markerInstance.marker.getLngLat() };
+  markerInstance.marker.setDraggable(true);
+  markerInstance.marker.getElement().classList.add('moving');
+  if (markerInstance.marker.getPopup().isOpen()) {
+    markerInstance.marker.togglePopup();
   }
+  changeToProperCursor();
 };
 
 window.moveMarker = moveMarker;
 
-// Function to handle marker movement
-const handleMoveMarker = async (e) => {
-  if (!isMovingMarker.value || !movingMarkerId.value) return;
+// Function to cancel move
+const cancelMove = () => {
+  const markerInstance = markers.value.find((m) => m.id === movingMarkerId.value);
+  if (markerInstance) {
+    markerInstance.marker.setLngLat(originalLngLat.value);
+    markerInstance.marker.setDraggable(false);
+    markerInstance.marker.getElement().classList.remove('moving');
+  }
+  isMovingMarker.value = false;
+  movingMarkerId.value = null;
+  originalLngLat.value = null;
+  changeToProperCursor();
+};
 
+// Function to confirm move
+const confirmMove = async () => {
   const markerInstance = markers.value.find((m) => m.id === movingMarkerId.value);
   if (!markerInstance) return;
 
-  const { lng, lat } = e.lngLat;
-  markerInstance.marker.setLngLat([lng, lat]);
+  const newLngLat = markerInstance.marker.getLngLat();
 
   try {
+    const popupContent = markerInstance.marker.getPopup()._content;
+    const descriptionSpan = popupContent.querySelector(`#description-display-${movingMarkerId.value} span`);
+    const description = descriptionSpan ? descriptionSpan.textContent.trim() : "";
+
     const response = await $fetch(`/api/markers`, {
       method: "PUT",
       body: {
         id: movingMarkerId.value,
-        latitude: lat,
-        longitude: lng,
-        description:
-          document.getElementById(`description-textarea-${movingMarkerId.value}`)?.value ||
-          markerInstance.marker.getPopup()._content.querySelector("span")?.textContent.trim() ||
-          "",
+        latitude: newLngLat.lat,
+        longitude: newLngLat.lng,
+        description,
         session_hash: sessionHash.value,
       },
     });
@@ -602,48 +582,29 @@ const handleMoveMarker = async (e) => {
     if (response.success) {
       const markerData = {
         id: movingMarkerId.value,
-        latitude: lat,
-        longitude: lng,
+        latitude: newLngLat.lat,
+        longitude: newLngLat.lng,
         description: response.marker.description,
         images: response.marker.images,
         session_hash: sessionHash.value,
       };
-      // Update the popup content to reflect the new state
       markerInstance.marker.getPopup().setHTML(createPopupContent(markerData, markerInstance));
     } else {
       alert("Не удалось обновить позицию маркера: " + response.error);
-      markerInstance.marker.setLngLat([response.marker.longitude, response.marker.latitude]);
+      markerInstance.marker.setLngLat(originalLngLat.value);
     }
   } catch (error) {
     console.error("Error updating marker position:", error);
     alert("Ошибка при обновлении позиции маркера: " + error.message);
-    markerInstance.marker.setLngLat([markerInstance.marker.getLngLat().lng, markerInstance.marker.getLngLat().lat]);
+    markerInstance.marker.setLngLat(originalLngLat.value);
   }
 
-  // Reset moving state
+  markerInstance.marker.setDraggable(false);
+  markerInstance.marker.getElement().classList.remove('moving');
   isMovingMarker.value = false;
   movingMarkerId.value = null;
+  originalLngLat.value = null;
   changeToProperCursor();
-
-  // Ensure the popup is updated to reflect the button text change
-  const markerData = {
-    id: markerInstance.id,
-    latitude: markerInstance.marker.getLngLat().lat,
-    longitude: markerInstance.marker.getLngLat().lng,
-    description:
-      document.getElementById(`description-textarea-${markerInstance.id}`)?.value ||
-      markerInstance.marker.getPopup()._content.querySelector("span")?.textContent.trim() ||
-      "",
-    images: markerInstance.marker.getPopup()._content.querySelectorAll("img").length > 0
-      ? Array.from(markerInstance.marker.getPopup()._content.querySelectorAll("img")).map((img, index) => ({
-        id: index + 1,
-        image_url: img.src,
-        created_at: new Date().toISOString(),
-      }))
-      : [],
-    session_hash: sessionHash.value,
-  };
-  markerInstance.marker.getPopup().setHTML(createPopupContent(markerData, markerInstance));
 };
 
 // Function to remove marker
@@ -680,15 +641,13 @@ const toggleAddMarker = () => {
 };
 
 const changeToProperCursor = () => {
-  mapCanvas.style.cursor = isAddingMarker.value || isMovingMarker.value ? "crosshair" : "";
+  mapCanvas.style.cursor = isAddingMarker.value ? "crosshair" : isMovingMarker.value ? "move" : "";
 };
 
-// Handle map click to add or move marker
+// Handle map click to add marker
 const handleMapClick = (e) => {
   if (isAddingMarker.value) {
     addMarker(e);
-  } else if (isMovingMarker.value) {
-    handleMoveMarker(e);
   }
 };
 
@@ -1135,6 +1094,46 @@ onUnmounted(() => {
   background-color: #c82333;
 }
 
+/* Moving panel styles */
+.moving-panel {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: white;
+  padding: 10px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+}
+
+.moving-panel button {
+  padding: 5px 10px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.moving-panel button:first-of-type {
+  background-color: #dc3545;
+  color: white;
+}
+
+.moving-panel button:last-of-type {
+  background-color: #28a745;
+  color: white;
+}
+
+/* Marker animation */
+.maplibregl-marker.moving {
+  animation: pulse 2s ease infinite;
+}
+
 @media (max-width: 768px) {
   .add-marker-btn {}
 
@@ -1170,6 +1169,18 @@ onUnmounted(() => {
   .close-modal-btn {
     font-size: 14px;
     padding: 6px 12px;
+  }
+
+  .moving-panel {
+    flex-direction: column;
+    gap: 5px;
+    padding: 8px;
+    font-size: 12px;
+  }
+
+  .moving-panel button {
+    font-size: 12px;
+    padding: 4px 8px;
   }
 }
 </style>
