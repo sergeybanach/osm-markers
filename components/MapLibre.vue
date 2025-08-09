@@ -15,6 +15,11 @@
       </button>
     </div>
 
+    <!-- Button for marker list -->
+    <button class="marker-list-btn" @click="showMarkerList = !showMarkerList">
+      Список маркеров
+    </button>
+
     <!-- Notification for session hash copied or image upload -->
     <div v-if="showNotification" class="notification">
       {{ notificationMessage }}
@@ -35,6 +40,27 @@
       </div>
     </div>
 
+    <!-- Marker list sidebar -->
+    <div v-if="showMarkerList" class="marker-list-sidebar">
+      <button class="close-sidebar-btn" @click="showMarkerList = false">Закрыть</button>
+      <h2>Список маркеров</h2>
+      <ul>
+        <li v-for="m in markerData" :key="m.id">
+          <div>Координаты: {{ m.latitude.toFixed(6) }}, {{ m.longitude.toFixed(6) }}</div>
+          <div>Описание: {{ m.description || "Описание отсутствует" }}</div>
+          <div>Изображения:
+            <div v-if="m.images.length > 0">
+              <img v-for="img in m.images" :key="img.id" :src="img.image_url" alt="Изображение маркера" style="width: 100px; height: auto; margin: 5px; cursor: pointer;" @click="openImageModal(img.image_url)">
+            </div>
+            <div v-else>Изображения отсутствуют</div>
+          </div>
+          <button @click="goToMarker(m)">Просмотреть на карте</button>
+          <button @click="removeMarker(m.id)">Удалить</button>
+        </li>
+      </ul>
+      <div v-if="markerData.length === 0">Маркеры отсутствуют</div>
+    </div>
+
     <div id="map" :class="{ 'adding-marker': isAddingMarker, 'moving-marker': isMovingMarker }"
       style="width: 100%; height: 100vh"></div>
   </div>
@@ -51,7 +77,11 @@ const movingMarkerId = ref(null);
 const originalLngLat = ref(null);
 let map = null;
 let mapCanvas = null;
-const markers = ref([]);
+const markers = ref([]); // { id, marker: instance }
+const markerData = ref([]); // Full marker data including images, description, etc.
+
+// State for marker list
+const showMarkerList = ref(false);
 
 // State for modal
 const showImageModal = ref(false);
@@ -205,7 +235,7 @@ const createPopupContent = (marker, markerInstance) => {
 
   return `
     <div style="max-width: 200px; padding: 10px; font-family: Arial, sans-serif; font-size: 14px; line-height: 1.5;">
-      <p style="font-weight: 600; margin-bottom: 5px;">Описание:</p>
+      <p style="font-weight: 600; margin-bottom: 5px; margin-top: 0px;">Описание:</p>
       <div id="description-display-${marker.id}" style="display: flex; align-items: flex-start; margin-bottom: 10px;">
         <span style="flex: 1; font-size: 14px; white-space: normal; word-wrap: break-word;">${marker.description || "Описание отсутствует"
     }</span>
@@ -321,15 +351,14 @@ const saveDescription = async (markerId) => {
     });
 
     if (response.success) {
-      const markerData = {
-        id: markerId,
-        latitude: markerInstance.marker.getLngLat().lat,
-        longitude: markerInstance.marker.getLngLat().lng,
-        description: newDescription,
-        images: response.marker.images,
-        session_hash: sessionHash.value,
-      };
-      markerInstance.marker.getPopup().setHTML(createPopupContent(markerData, markerInstance));
+      // Update local markerData
+      const index = markerData.value.findIndex((m) => m.id === markerId);
+      if (index > -1) {
+        markerData.value[index] = response.marker;
+      }
+
+      // Update popup
+      markerInstance.marker.getPopup().setHTML(createPopupContent(response.marker, markerInstance));
     } else {
       alert("Не удалось обновить описание: " + response.error);
     }
@@ -378,15 +407,15 @@ const updateMarkerCoordinates = async (markerId) => {
 
     if (response.success) {
       markerInstance.marker.setLngLat([newLng, newLat]);
-      const markerData = {
-        id: markerId,
-        latitude: newLat,
-        longitude: newLng,
-        description: response.marker.description,
-        images: response.marker.images,
-        session_hash: sessionHash.value,
-      };
-      markerInstance.marker.getPopup().setHTML(createPopupContent(markerData, markerInstance));
+
+      // Update local markerData
+      const index = markerData.value.findIndex((m) => m.id === markerId);
+      if (index > -1) {
+        markerData.value[index] = response.marker;
+      }
+
+      // Update popup
+      markerInstance.marker.getPopup().setHTML(createPopupContent(response.marker, markerInstance));
     } else {
       alert("Не удалось обновить координаты маркера: " + response.error);
     }
@@ -449,24 +478,21 @@ const uploadImages = async (markerId) => {
     }
 
     if (newImages.length > 0) {
-      // Refresh marker popup with updated images
-      const response = await $fetch(`/api/markers?session_hash=${encodeURIComponent(sessionHash.value)}`, {
-        method: "GET",
-      });
-      if (response.success) {
-        const updatedMarker = response.markers.find(m => m.id === markerId);
-        if (updatedMarker) {
-          const markerData = {
-            id: markerId,
-            latitude: markerInstance.marker.getLngLat().lat,
-            longitude: markerInstance.marker.getLngLat().lng,
-            description: updatedMarker.description,
-            images: updatedMarker.images,
-            session_hash: sessionHash.value,
-          };
-          markerInstance.marker.getPopup().setHTML(createPopupContent(markerData, markerInstance));
-          triggerNotification(`${newImages.length} изображение${newImages.length > 1 ? "й" : ""} успешно загружено!`);
-        }
+      // Update local markerData and popup without fetching all
+      const markerD = markerData.value.find((m) => m.id === markerId);
+      if (markerD) {
+        const updatedImages = [...markerD.images, ...newImages];
+        markerD.images = updatedImages;
+
+        const popupData = {
+          id: markerId,
+          latitude: markerInstance.marker.getLngLat().lat,
+          longitude: markerInstance.marker.getLngLat().lng,
+          description: markerD.description,
+          images: updatedImages,
+        };
+        markerInstance.marker.getPopup().setHTML(createPopupContent(popupData, markerInstance));
+        triggerNotification(`${newImages.length} изображение${newImages.length > 1 ? "й" : ""} успешно загружено!`);
       }
     }
   } catch (error) {
@@ -493,24 +519,21 @@ const removeImage = async (markerId, imageId) => {
     });
 
     if (response.success) {
-      // Refresh marker popup with updated images
-      const markerResponse = await $fetch(`/api/markers?session_hash=${encodeURIComponent(sessionHash.value)}`, {
-        method: "GET",
-      });
-      if (markerResponse.success) {
-        const updatedMarker = markerResponse.markers.find(m => m.id === markerId);
-        if (updatedMarker) {
-          const markerData = {
-            id: markerId,
-            latitude: markerInstance.marker.getLngLat().lat,
-            longitude: markerInstance.marker.getLngLat().lng,
-            description: updatedMarker.description,
-            images: updatedMarker.images,
-            session_hash: sessionHash.value,
-          };
-          markerInstance.marker.getPopup().setHTML(createPopupContent(markerData, markerInstance));
-          triggerNotification("Изображение успешно удалено!");
-        }
+      // Update local markerData and popup without fetching all
+      const markerD = markerData.value.find((m) => m.id === markerId);
+      if (markerD) {
+        const updatedImages = markerD.images.filter((img) => img.id !== imageId);
+        markerD.images = updatedImages;
+
+        const popupData = {
+          id: markerId,
+          latitude: markerInstance.marker.getLngLat().lat,
+          longitude: markerInstance.marker.getLngLat().lng,
+          description: markerD.description,
+          images: updatedImages,
+        };
+        markerInstance.marker.getPopup().setHTML(createPopupContent(popupData, markerInstance));
+        triggerNotification("Изображение успешно удалено!");
       }
     } else {
       alert("Не удалось удалить изображение: " + response.error);
@@ -580,15 +603,14 @@ const confirmMove = async () => {
     });
 
     if (response.success) {
-      const markerData = {
-        id: movingMarkerId.value,
-        latitude: newLngLat.lat,
-        longitude: newLngLat.lng,
-        description: response.marker.description,
-        images: response.marker.images,
-        session_hash: sessionHash.value,
-      };
-      markerInstance.marker.getPopup().setHTML(createPopupContent(markerData, markerInstance));
+      // Update local markerData
+      const index = markerData.value.findIndex((m) => m.id === movingMarkerId.value);
+      if (index > -1) {
+        markerData.value[index] = response.marker;
+      }
+
+      // Update popup
+      markerInstance.marker.getPopup().setHTML(createPopupContent(response.marker, markerInstance));
     } else {
       alert("Не удалось обновить позицию маркера: " + response.error);
       markerInstance.marker.setLngLat(originalLngLat.value);
@@ -621,6 +643,7 @@ const removeMarker = async (markerId) => {
     if (response.success) {
       markerInstance.marker.remove();
       markers.value = markers.value.filter((m) => m.id !== markerId);
+      markerData.value = markerData.value.filter((m) => m.id !== markerId);
     } else {
       alert("Не удалось удалить маркер: " + response.error);
     }
@@ -656,7 +679,7 @@ const addMarker = async (e) => {
   const { lng, lat } = e.lngLat;
   const description = "";
 
-  const markerData = { latitude: lat, longitude: lng, description, images: [], session_hash: sessionHash.value };
+  const markerD = { latitude: lat, longitude: lng, description, images: [], session_hash: sessionHash.value };
   const popup = new maplibregl.Popup();
   const markerInstance = new maplibregl.Marker().setLngLat([lng, lat]).setPopup(popup).addTo(map);
 
@@ -667,9 +690,11 @@ const addMarker = async (e) => {
     });
 
     if (response.success) {
-      markerData.id = response.marker.id;
-      popup.setHTML(createPopupContent(markerData, markerInstance));
-      markers.value.push({ id: markerData.id, marker: markerInstance });
+      markerD.id = response.marker.id;
+      markerD.created_at = response.marker.created_at;
+      popup.setHTML(createPopupContent(markerD, markerInstance));
+      markers.value.push({ id: markerD.id, marker: markerInstance });
+      markerData.value.push(markerD);
 
       const markerElement = markerInstance.getElement();
       markerElement.style.cursor = "pointer";
@@ -735,6 +760,7 @@ const loadMarkers = async () => {
     });
 
     if (response.success) {
+      // Clear existing markers
       markers.value.forEach((m) => {
         const markerElement = m.marker.getElement();
         markerElement.removeEventListener("mouseover", () => { });
@@ -742,8 +768,9 @@ const loadMarkers = async () => {
         m.marker.remove();
       });
       markers.value = [];
+      markerData.value = response.markers;
 
-      response.markers.forEach((marker) => {
+      markerData.value.forEach((marker) => {
         const popup = new maplibregl.Popup();
         const markerInstance = new maplibregl.Marker()
           .setLngLat([marker.longitude, marker.latitude])
@@ -812,6 +839,7 @@ const generateNewHash = async () => {
       await removeMarker(marker.id);
     }
     markers.value = [];
+    markerData.value = [];
 
     const response = await fetch("/api/generate-session-hash");
     const data = await response.json();
@@ -859,6 +887,16 @@ const selectAndCopyHash = (event) => {
     console.error("Error selecting session hash:", error);
     alert("Не удалось выделить хэш сессии: " + error.message);
   }
+};
+
+// Function to go to marker on map
+const goToMarker = (m) => {
+  map.flyTo({ center: [m.longitude, m.latitude], zoom: 15 });
+  const markerInst = markers.value.find((mm) => mm.id === m.id);
+  if (markerInst) {
+    markerInst.marker.togglePopup();
+  }
+  showMarkerList.value = false; // Close sidebar after clicking
 };
 
 onMounted(async () => {
@@ -991,6 +1029,34 @@ onUnmounted(() => {
 
   border-top-left-radius: 0;
   border-bottom-left-radius: 0;
+}
+
+.marker-list-btn {
+  position: absolute;
+  top: 130px;
+  left: 10px;
+  z-index: 50;
+
+  background: linear-gradient(45deg, #3283a3, #1e70da, #4facfe, #00f2fe);
+  background-size: 400% 400%;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  text-transform: uppercase;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  animation: gradient 6s ease infinite, pulse 2s ease infinite;
+
+  font-weight: 600;
+  font-size: 14px;
+  padding: 6px 12px;
+}
+
+.marker-list-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
 }
 
 #map-wrapper {
@@ -1135,12 +1201,75 @@ onUnmounted(() => {
   animation: pulse 2s ease infinite;
 }
 
+/* Marker list sidebar styles */
+.marker-list-sidebar {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 300px;
+  height: 100%;
+  background: white;
+  overflow-y: auto;
+  z-index: 50;
+  padding: 10px;
+  box-shadow: -2px 0 5px rgba(0, 0, 0, 0.2);
+}
+
+.marker-list-sidebar h2 {
+  font-size: 18px;
+  margin-bottom: 10px;
+}
+
+.marker-list-sidebar ul {
+  list-style: none;
+  padding: 0;
+}
+
+.marker-list-sidebar li {
+  margin-bottom: 20px;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.marker-list-sidebar button {
+  padding: 5px 10px;
+  margin-right: 5px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.marker-list-sidebar button:first-of-type {
+  background-color: #007bff;
+  color: white;
+}
+
+.marker-list-sidebar button:last-of-type {
+  background-color: #dc3545;
+  color: white;
+}
+
+.close-sidebar-btn {
+  padding: 5px 10px;
+  background-color: #6c757d;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  margin-bottom: 10px;
+}
+
 @media (max-width: 768px) {
   .add-marker-btn {}
 
   .copy-session-hash-btn {}
 
   .generate-new-hash-btn {}
+
+  .marker-list-btn {}
 
   .notification {
     font-size: 12px;
@@ -1182,6 +1311,15 @@ onUnmounted(() => {
   .moving-panel button {
     font-size: 12px;
     padding: 4px 8px;
+  }
+
+  .marker-list-sidebar {
+    width: 100%;
+    right: 0;
+  }
+
+  .marker-list-sidebar li img {
+    width: 80px;
   }
 }
 </style>
