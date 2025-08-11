@@ -69,10 +69,9 @@ const copyBtcAddress = async () => {
 
     font-size: 14px;
     padding: 8px 16px;
-    
-    top: 90px;
+
+    top: 130px;
     left: 10px;
-    /* right: 56px; */
 }
 
 .donate-btn:hover {

@@ -50,7 +50,9 @@
           <div>Описание: {{ m.description || "Описание отсутствует" }}</div>
           <div>Изображения:
             <div v-if="m.images.length > 0">
-              <img v-for="img in m.images" :key="img.id" :src="img.image_url" alt="Изображение маркера" style="width: 100px; height: auto; margin: 5px; cursor: pointer;" @click="openImageModal(img.image_url)">
+              <img v-for="img in m.images" :key="img.id" :src="img.image_url" alt="Изображение маркера"
+                style="width: 100px; height: auto; margin: 5px; cursor: pointer;"
+                @click="openImageModal(img.image_url)">
             </div>
             <div v-else>Изображения отсутствуют</div>
           </div>
@@ -694,7 +696,6 @@ const addMarker = async (e) => {
       markerD.created_at = response.marker.created_at;
       popup.setHTML(createPopupContent(markerD, markerInstance));
       markers.value.push({ id: markerD.id, marker: markerInstance });
-      markerData.value.push(markerD);
 
       const markerElement = markerInstance.getElement();
       markerElement.style.cursor = "pointer";
@@ -1033,7 +1034,7 @@ onUnmounted(() => {
 
 .marker-list-btn {
   position: absolute;
-  top: 130px;
+  top: 90px;
   left: 10px;
   z-index: 50;
 
