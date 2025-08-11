@@ -1325,7 +1325,7 @@ onUnmounted(() => {
 }
 
 .maplibregl-control-container .maplibregl-ctrl-top-right {
-  margin-top: 40px;
+  margin-top: 65px;
   /* Adjust this value to move the controls down */
 }
 </style>
