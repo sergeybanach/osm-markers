@@ -1317,6 +1317,7 @@ onUnmounted(() => {
   .marker-list-sidebar {
     width: 100%;
     right: 0;
+    left: 0;
   }
 
   .marker-list-sidebar li img {
