@@ -1,24 +1,21 @@
 <template>
   <div id="map-wrapper">
-    <button class="add-marker-btn" :class="{ active: isAddingMarker }" @click="toggleAddMarker">
-      {{ isAddingMarker ? "Кликните на карту для размещения маркера" : "Добавить маркер" }}
-    </button>
-    <DonateButton />
-
-    <!-- Move Copy URL and New Hash buttons below Add Marker -->
-    <div style="position: absolute; top: 50px; left: 10px; z-index: 50;">
-      <button @click="copySessionHash" class="copy-session-hash-btn" style="">
+    <!-- Consolidated button container -->
+    <div class="button-container">
+      <button class="add-marker-btn" :class="{ active: isAddingMarker }" @click="toggleAddMarker">
+        {{ isAddingMarker ? "Кликните на карту для размещения маркера" : "Добавить маркер" }}
+      </button>
+      <button @click="copySessionHash" class="copy-session-hash-btn">
         Копировать URL
       </button>
-      <button @click="generateNewHash" class="generate-new-hash-btn" style="">
+      <button @click="generateNewHash" class="generate-new-hash-btn">
         Новый хэш
       </button>
+      <button class="marker-list-btn" @click="showMarkerList = !showMarkerList">
+        Список маркеров
+      </button>
     </div>
-
-    <!-- Button for marker list -->
-    <button class="marker-list-btn" @click="showMarkerList = !showMarkerList">
-      Список маркеров
-    </button>
+    <DonateButton />
 
     <!-- Notification for session hash copied or image upload -->
     <div v-if="showNotification" class="notification">
@@ -42,13 +39,16 @@
 
     <!-- Marker list sidebar -->
     <div v-if="showMarkerList" class="marker-list-sidebar">
-      <button class="close-sidebar-btn" @click="showMarkerList = false">Закрыть</button>
+      <button class="close-sidebar-btn" @click="showMarkerList = false">
+        Закрыть
+      </button>
       <h2>Список маркеров</h2>
       <ul>
         <li v-for="m in markerData" :key="m.id">
           <div>Координаты: {{ m.latitude.toFixed(6) }}, {{ m.longitude.toFixed(6) }}</div>
           <div>Описание: {{ m.description || "Описание отсутствует" }}</div>
-          <div>Изображения:
+          <div>
+            Изображения:
             <div v-if="m.images.length > 0">
               <img v-for="img in m.images" :key="img.id" :src="img.image_url" alt="Изображение маркера"
                 style="width: 100px; height: auto; margin: 5px; cursor: pointer;"
@@ -952,12 +952,17 @@ onUnmounted(() => {
 <style>
 @import "maplibre-gl/dist/maplibre-gl.css";
 
-.add-marker-btn {
+.button-container {
   position: absolute;
   top: 10px;
   left: 10px;
   z-index: 50;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
 
+.add-marker-btn {
   background: linear-gradient(45deg, #3283a3, #1e70da, #4facfe, #00f2fe);
   background-size: 400% 400%;
   color: white;
@@ -966,10 +971,8 @@ onUnmounted(() => {
   cursor: pointer;
   text-transform: uppercase;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-
   transition: transform 0.2s ease, box-shadow 0.2s ease;
   animation: gradient 6s ease infinite, pulse 2s ease infinite;
-
   font-weight: 600;
   font-size: 14px;
   padding: 6px 12px;
@@ -999,16 +1002,11 @@ onUnmounted(() => {
   cursor: pointer;
   text-transform: uppercase;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-
   transition: transform 0.2s ease, box-shadow 0.2s ease;
   animation: gradient 6s ease infinite, pulse 2s ease infinite;
-
   font-weight: 600;
   font-size: 14px;
   padding: 6px 12px;
-
-  border-top-right-radius: 0;
-  border-bottom-right-radius: 0;
 }
 
 .generate-new-hash-btn {
@@ -1020,24 +1018,14 @@ onUnmounted(() => {
   cursor: pointer;
   text-transform: uppercase;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-
   transition: transform 0.2s ease, box-shadow 0.2s ease;
   animation: gradient 6s ease infinite, pulse 2s ease infinite;
-
   font-weight: 600;
   font-size: 14px;
   padding: 6px 12px;
-
-  border-top-left-radius: 0;
-  border-bottom-left-radius: 0;
 }
 
 .marker-list-btn {
-  position: absolute;
-  top: 90px;
-  left: 10px;
-  z-index: 50;
-
   background: linear-gradient(45deg, #3283a3, #1e70da, #4facfe, #00f2fe);
   background-size: 400% 400%;
   color: white;
@@ -1046,20 +1034,30 @@ onUnmounted(() => {
   cursor: pointer;
   text-transform: uppercase;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-
   transition: transform 0.2s ease, box-shadow 0.2s ease;
   animation: gradient 6s ease infinite, pulse 2s ease infinite;
-
   font-weight: 600;
   font-size: 14px;
   padding: 6px 12px;
 }
 
-.marker-list-btn:hover {
+.marker-list-btn:hover,
+.copy-session-hash-btn:hover,
+.generate-new-hash-btn:hover {
   transform: translateY(-1px);
   box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
 }
 
+/* Remove individual positioning for buttons */
+.copy-session-hash-btn,
+.generate-new-hash-btn,
+.marker-list-btn {
+  /* Remove border-radius adjustments for Copy URL and New Hash */
+  border-radius: 8px;
+  /* Reset to standard border-radius */
+}
+
+/* Rest of the styles remain unchanged */
 #map-wrapper {
   position: relative;
   height: 100vh;
@@ -1264,33 +1262,24 @@ onUnmounted(() => {
 }
 
 @media (max-width: 768px) {
-  .add-marker-btn {}
+  .button-container {
+    flex-direction: column;
+    gap: 8px;
+  }
 
-  .copy-session-hash-btn {}
-
-  .generate-new-hash-btn {}
-
-  .marker-list-btn {}
+  .add-marker-btn,
+  .copy-session-hash-btn,
+  .generate-new-hash-btn,
+  .marker-list-btn {
+    font-size: 12px;
+    padding: 4px 8px;
+  }
 
   .notification {
     font-size: 12px;
     padding: 8px 16px;
     max-width: 90%;
     text-align: center;
-  }
-
-  input#sessionHashInput {
-    font-size: 14px;
-    padding: 4px;
-  }
-
-  button {
-    font-size: 14px;
-    padding: 4px 8px;
-  }
-
-  input[type="file"] {
-    font-size: 12px;
   }
 
   .image-modal-content {
