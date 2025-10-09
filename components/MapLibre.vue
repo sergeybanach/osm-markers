@@ -963,7 +963,7 @@ onUnmounted(() => {
 }
 
 .add-marker-btn {
-  background: linear-gradient(45deg, #3283a3, #1e70da, #4facfe, #00f2fe);
+  background: linear-gradient(45deg, #4caf50, #8bc34a, #66bb6a, #a5d6a7);
   background-size: 400% 400%;
   color: white;
   border: none;
@@ -978,23 +978,8 @@ onUnmounted(() => {
   padding: 6px 12px;
 }
 
-.add-marker-btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
-}
-
-.add-marker-btn.active {
-  transform: translateY(-1px);
-  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
-}
-
-.add-marker-btn.active:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
-}
-
 .copy-session-hash-btn {
-  background: linear-gradient(45deg, #4c9e16, #4c9e16, #4facfe, #00f2fe);
+  background: linear-gradient(45deg, #0288d1, #29b6f6, #4fc3f7, #81d4fa);
   background-size: 400% 400%;
   color: white;
   border: none;
@@ -1010,7 +995,7 @@ onUnmounted(() => {
 }
 
 .generate-new-hash-btn {
-  background: linear-gradient(45deg, #6f757e, #6f757e, #4facfe, #00f2fe);
+  background: linear-gradient(45deg, #f57c00, #ff9800, #ffb300, #ffcc80);
   background-size: 400% 400%;
   color: white;
   border: none;
@@ -1026,7 +1011,7 @@ onUnmounted(() => {
 }
 
 .marker-list-btn {
-  background: linear-gradient(45deg, #3283a3, #1e70da, #4facfe, #00f2fe);
+  background: linear-gradient(45deg, #7b1fa2, #ab47bc, #ce93d8, #f3e5f5);
   background-size: 400% 400%;
   color: white;
   border: none;
@@ -1041,9 +1026,20 @@ onUnmounted(() => {
   padding: 6px 12px;
 }
 
-.marker-list-btn:hover,
+.add-marker-btn:hover,
 .copy-session-hash-btn:hover,
-.generate-new-hash-btn:hover {
+.generate-new-hash-btn:hover,
+.marker-list-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+}
+
+.add-marker-btn.active {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+}
+
+.add-marker-btn.active:hover {
   transform: translateY(-1px);
   box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
 }
@@ -1052,9 +1048,7 @@ onUnmounted(() => {
 .copy-session-hash-btn,
 .generate-new-hash-btn,
 .marker-list-btn {
-  /* Remove border-radius adjustments for Copy URL and New Hash */
   border-radius: 8px;
-  /* Reset to standard border-radius */
 }
 
 /* Rest of the styles remain unchanged */
@@ -1316,6 +1310,5 @@ onUnmounted(() => {
 
 .maplibregl-control-container .maplibregl-ctrl-top-right {
   margin-top: 65px;
-  /* Adjust this value to move the controls down */
 }
 </style>
