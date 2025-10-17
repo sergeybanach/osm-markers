@@ -2,6 +2,17 @@
   <div id="map-wrapper">
     <!-- Consolidated button container -->
     <div class="button-container">
+      <!-- Search bar -->
+      <div class="search-container">
+        <input
+          v-model="searchQuery"
+          type="text"
+          placeholder="Введите адрес..."
+          class="search-input"
+          @keyup.enter="searchAddress"
+        />
+        <button class="search-btn" @click="searchAddress">Поиск</button>
+      </div>
       <button class="add-marker-btn" :class="{ active: isAddingMarker }" @click="toggleAddMarker">
         {{ isAddingMarker ? "Кликните на карту для размещения маркера" : "Добавить маркер" }}
       </button>
@@ -17,7 +28,7 @@
     </div>
     <DonateButton />
 
-    <!-- Notification for session hash copied or image upload -->
+    <!-- Notification for session hash copied, image upload, or search results -->
     <div v-if="showNotification" class="notification">
       {{ notificationMessage }}
     </div>
@@ -89,6 +100,9 @@ const showMarkerList = ref(false);
 const showImageModal = ref(false);
 const selectedImageUrl = ref("");
 
+// State for search
+const searchQuery = ref("");
+
 // Session hash management
 const route = useRoute();
 const router = useRouter();
@@ -109,6 +123,41 @@ const triggerNotification = (message) => {
     showNotification.value = false;
     notificationMessage.value = "";
   }, 2000);
+};
+
+// Function to search address using Nominatim API
+const searchAddress = async () => {
+  if (!searchQuery.value.trim()) {
+    triggerNotification("Введите адрес для поиска!");
+    return;
+  }
+
+  try {
+    const response = await fetch(
+      `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery.value)}&limit=1`
+    );
+    const data = await response.json();
+
+    if (data.length > 0) {
+      const { lat, lon } = data[0];
+      const latitude = parseFloat(lat);
+      const longitude = parseFloat(lon);
+
+      if (isNaN(latitude) || isNaN(longitude)) {
+        triggerNotification("Некорректные координаты в ответе API.");
+        return;
+      }
+
+      map.flyTo({ center: [longitude, latitude], zoom: 15 });
+      triggerNotification(`Найден адрес: ${data[0].display_name}`);
+      await saveMapPosition(); // Save the new map position
+    } else {
+      triggerNotification("Адрес не найден. Попробуйте другой запрос.");
+    }
+  } catch (error) {
+    console.error("Error searching address:", error);
+    triggerNotification("Ошибка при поиске адреса: " + error.message);
+  }
 };
 
 // Function to copy coordinates to clipboard
@@ -962,6 +1011,41 @@ onUnmounted(() => {
   gap: 10px;
 }
 
+.search-container {
+  display: flex;
+  gap: 5px;
+}
+
+.search-input {
+  padding: 6px 10px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  font-size: 14px;
+  width: 200px;
+  font-family: Arial, sans-serif;
+}
+
+.search-btn {
+  background: linear-gradient(45deg, #0288d1, #29b6f6, #4fc3f7, #81d4fa);
+  background-size: 400% 400%;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  text-transform: uppercase;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  animation: gradient 6s ease infinite, pulse 2s ease infinite;
+  font-weight: 600;
+  font-size: 14px;
+  padding: 6px 12px;
+}
+
+.search-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+}
+
 .add-marker-btn {
   background: linear-gradient(45deg, #4caf50, #8bc34a, #66bb6a, #a5d6a7);
   background-size: 400% 400%;
@@ -1029,7 +1113,8 @@ onUnmounted(() => {
 .add-marker-btn:hover,
 .copy-session-hash-btn:hover,
 .generate-new-hash-btn:hover,
-.marker-list-btn:hover {
+.marker-list-btn:hover,
+.search-btn:hover {
   transform: translateY(-1px);
   box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
 }
@@ -1261,6 +1346,22 @@ onUnmounted(() => {
     gap: 8px;
   }
 
+  .search-container {
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .search-input {
+    width: 100%;
+    font-size: 12px;
+    padding: 4px 8px;
+  }
+
+  .search-btn {
+    font-size: 12px;
+    padding: 4px 8px;
+  }
+
   .add-marker-btn,
   .copy-session-hash-btn,
   .generate-new-hash-btn,
@@ -1309,6 +1410,6 @@ onUnmounted(() => {
 }
 
 .maplibregl-control-container .maplibregl-ctrl-top-right {
-  margin-top: 65px;
+  margin-top: 100px; /* Adjusted to account for additional search bar height */
 }
 </style>
