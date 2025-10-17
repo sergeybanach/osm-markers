@@ -1,16 +1,31 @@
+<!-- components/MapLibre.vue -->
 <template>
   <div id="map-wrapper">
     <!-- Consolidated button container -->
     <div class="button-container">
-      <!-- Search bar -->
+      <!-- Search bar with autocomplete -->
       <div class="search-container">
         <input
           v-model="searchQuery"
           type="text"
           placeholder="Введите адрес..."
           class="search-input"
+          @input="fetchSuggestions"
           @keyup.enter="searchAddress"
+          @keydown="handleKeydown"
         />
+        <!-- Autocomplete dropdown -->
+        <ul v-if="suggestions.length > 0" class="suggestions-list">
+          <li
+            v-for="(suggestion, index) in suggestions"
+            :key="suggestion.place_id"
+            :class="{ 'suggestion-highlighted': index === highlightedSuggestionIndex }"
+            @click="selectSuggestion(suggestion)"
+            @mouseover="highlightedSuggestionIndex = index"
+          >
+            {{ suggestion.display_name }}
+          </li>
+        </ul>
         <button class="search-btn" @click="searchAddress">Поиск</button>
       </div>
       <button class="add-marker-btn" :class="{ active: isAddingMarker }" @click="toggleAddMarker">
@@ -102,8 +117,10 @@ const selectedImageUrl = ref("");
 
 // State for search
 const searchQuery = ref("");
+const suggestions = ref([]);
+const highlightedSuggestionIndex = ref(-1);
 
-// Session hash management
+// State for session hash
 const route = useRoute();
 const router = useRouter();
 const sessionHash = ref("");
@@ -114,6 +131,66 @@ const notificationMessage = ref("");
 // Default map position
 const defaultCenter = [0, 0];
 const defaultZoom = 1;
+
+// Debounce function to limit API calls
+const debounce = (func, wait) => {
+  let timeout;
+  return (...args) => {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func(...args), wait);
+  };
+};
+
+// Function to fetch address suggestions from Nominatim
+const fetchSuggestions = debounce(async () => {
+  if (!searchQuery.value.trim()) {
+    suggestions.value = [];
+    highlightedSuggestionIndex.value = -1;
+    return;
+  }
+
+  try {
+    const response = await fetch(
+      `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery.value)}&limit=5`
+    );
+    const data = await response.json();
+    suggestions.value = data;
+    highlightedSuggestionIndex.value = -1; // Reset highlight
+  } catch (error) {
+    console.error("Error fetching suggestions:", error);
+    triggerNotification("Ошибка при получении предложений адреса: " + error.message);
+  }
+}, 300);
+
+// Function to select a suggestion from the dropdown
+const selectSuggestion = (suggestion) => {
+  searchQuery.value = suggestion.display_name;
+  suggestions.value = [];
+  highlightedSuggestionIndex.value = -1;
+  searchAddress(suggestion); // Pass the suggestion directly to search
+};
+
+// Function to handle keyboard navigation in suggestions
+const handleKeydown = (event) => {
+  if (suggestions.value.length === 0) return;
+
+  if (event.key === "ArrowDown") {
+    event.preventDefault();
+    highlightedSuggestionIndex.value = Math.min(
+      highlightedSuggestionIndex.value + 1,
+      suggestions.value.length - 1
+    );
+  } else if (event.key === "ArrowUp") {
+    event.preventDefault();
+    highlightedSuggestionIndex.value = Math.max(highlightedSuggestionIndex.value - 1, -1);
+  } else if (event.key === "Enter" && highlightedSuggestionIndex.value >= 0) {
+    event.preventDefault();
+    selectSuggestion(suggestions.value[highlightedSuggestionIndex.value]);
+  } else if (event.key === "Escape") {
+    suggestions.value = [];
+    highlightedSuggestionIndex.value = -1;
+  }
+};
 
 // Function to show notification briefly
 const triggerNotification = (message) => {
@@ -126,34 +203,47 @@ const triggerNotification = (message) => {
 };
 
 // Function to search address using Nominatim API
-const searchAddress = async () => {
-  if (!searchQuery.value.trim()) {
+const searchAddress = async (suggestion = null) => {
+  if (!searchQuery.value.trim() && !suggestion) {
     triggerNotification("Введите адрес для поиска!");
     return;
   }
 
   try {
-    const response = await fetch(
-      `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery.value)}&limit=1`
-    );
-    const data = await response.json();
+    let latitude, longitude, displayName;
 
-    if (data.length > 0) {
-      const { lat, lon } = data[0];
-      const latitude = parseFloat(lat);
-      const longitude = parseFloat(lon);
+    if (suggestion) {
+      // Use the selected suggestion
+      latitude = parseFloat(suggestion.lat);
+      longitude = parseFloat(suggestion.lon);
+      displayName = suggestion.display_name;
+    } else {
+      // Fetch from API
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery.value)}&limit=1`
+      );
+      const data = await response.json();
 
-      if (isNaN(latitude) || isNaN(longitude)) {
-        triggerNotification("Некорректные координаты в ответе API.");
+      if (data.length === 0) {
+        triggerNotification("Адрес не найден. Попробуйте другой запрос.");
         return;
       }
 
-      map.flyTo({ center: [longitude, latitude], zoom: 15 });
-      triggerNotification(`Найден адрес: ${data[0].display_name}`);
-      await saveMapPosition(); // Save the new map position
-    } else {
-      triggerNotification("Адрес не найден. Попробуйте другой запрос.");
+      latitude = parseFloat(data[0].lat);
+      longitude = parseFloat(data[0].lon);
+      displayName = data[0].display_name;
     }
+
+    if (isNaN(latitude) || isNaN(longitude)) {
+      triggerNotification("Некорректные координаты в ответе API.");
+      return;
+    }
+
+    map.flyTo({ center: [longitude, latitude], zoom: 15 });
+    triggerNotification(`Найден адрес: ${displayName}`);
+    await saveMapPosition(); // Save the new map position
+    suggestions.value = []; // Clear suggestions after search
+    highlightedSuggestionIndex.value = -1;
   } catch (error) {
     console.error("Error searching address:", error);
     triggerNotification("Ошибка при поиске адреса: " + error.message);
@@ -1014,6 +1104,7 @@ onUnmounted(() => {
 .search-container {
   display: flex;
   gap: 5px;
+  position: relative; /* For positioning the suggestions list */
 }
 
 .search-input {
@@ -1023,6 +1114,39 @@ onUnmounted(() => {
   font-size: 14px;
   width: 200px;
   font-family: Arial, sans-serif;
+}
+
+.suggestions-list {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  width: 200px;
+  max-height: 200px;
+  overflow-y: auto;
+  background: white;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  z-index: 100;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.suggestions-list li {
+  padding: 8px 10px;
+  font-size: 14px;
+  cursor: pointer;
+  border-bottom: 1px solid #eee;
+}
+
+.suggestions-list li:last-child {
+  border-bottom: none;
+}
+
+.suggestions-list li:hover,
+.suggestion-highlighted {
+  background-color: #f0f0f0;
 }
 
 .search-btn {
@@ -1355,6 +1479,16 @@ onUnmounted(() => {
     width: 100%;
     font-size: 12px;
     padding: 4px 8px;
+  }
+
+  .suggestions-list {
+    width: 100%;
+    font-size: 12px;
+  }
+
+  .suggestions-list li {
+    font-size: 12px;
+    padding: 6px 8px;
   }
 
   .search-btn {
